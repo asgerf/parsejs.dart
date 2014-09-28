@@ -16,7 +16,7 @@ class Parser {
   }
   
   /// Consume a semicolon, or if a line-break was here, just pretend there was one here.
-  void magicSemicolon() {
+  void consumeSemicolon() {
     if (token.type == Token.SEMICOLON) {
       next();
       return;
@@ -274,44 +274,45 @@ class Parser {
     return parsePostfix();
   }
   
-  Expression parseBinary(int minPrecedence) {
+  Expression parseBinary(int minPrecedence, bool allowIn) {
     Expression exp = parseUnary();
     while (token.binaryPrecedence >= minPrecedence) {
+      if (!allowIn && token.value == 'in') break;
       Token operator = next();
-      Expression right = parseBinary(operator.binaryPrecedence + 1);
+      Expression right = parseBinary(operator.binaryPrecedence + 1, allowIn);
       exp = new BinaryExpression(exp, operator.value, right);
     }
     return exp;
   }
   
-  Expression parseConditional() {
-    Expression exp = parseBinary(Precedence.EXPRESSION);
+  Expression parseConditional(bool allowIn) {
+    Expression exp = parseBinary(Precedence.EXPRESSION, allowIn);
     if (token.type == Token.QUESTION) {
       Expression thenExp = parseAssignment();
       consume(Token.COLON);
-      Expression elseExp = parseAssignment();
+      Expression elseExp = parseAssignment(allowIn: allowIn);
       exp = new ConditionalExpression(exp, thenExp, elseExp);
     }
     return exp;
   }
   
-  Expression parseAssignment() {
-    Expression exp = parseConditional();
+  Expression parseAssignment({bool allowIn: true}) {
+    Expression exp = parseConditional(allowIn);
     if (token.type == Token.ASSIGN) {
       Token operator = next();
-      Expression right = parseAssignment();
+      Expression right = parseAssignment(allowIn: allowIn);
       exp = new AssignmentExpression(exp, operator.value, right);
     }
     return exp;
   }
   
-  Expression parseExpression() {
-    Expression exp = parseAssignment();
+  Expression parseExpression({bool allowIn: true}) {
+    Expression exp = parseAssignment(allowIn: allowIn);
     if (token.type == Token.COMMA) {
       List<Expression> expressions = <Expression>[exp];
       while (token.type == Token.COMMA) {
         next();
-        expressions.add(parseAssignment());
+        expressions.add(parseAssignment(allowIn: allowIn));
       }
       exp = new SequenceExpression(expressions);
     }
@@ -319,6 +320,273 @@ class Parser {
   }
   
   ////// STATEMENTS /////
+  
+  void consumeName(String name) {
+    if (token.type != Token.NAME || token.value != name) {
+      throw "Unexpected token $token, expected $name";
+    }
+    next();
+  }
+  
+  bool tryName(String name) {
+    if (token.type == Token.NAME && token.value == name) {
+      next();
+      return true;
+    } else {
+      return false;
+    }
+  }
+  
+  BlockStatement parseBlock() {
+    consume(Token.LBRACE);
+    List<Statement> list = <Statement>[];
+    while (token.type != Token.RBRACE) {
+      list.add(parseStatement());
+    }
+    consume(Token.RBRACE);
+    return new BlockStatement(list);
+  }
+  
+  VariableDeclaration parseVariableDeclaration() {
+    assert(token.value == 'var');
+    consume(Token.NAME);
+    List<VariableDeclarator> list = <VariableDeclarator>[];
+    while (true) {
+      Name name = parseName();
+      Expression init = null;
+      if (token.type == Token.ASSIGN) {
+        if (token.value != '=') {
+          throw "Compound assignment in initializer"; // TODO: error management
+        }
+        next();
+        init = parseAssignment();
+      }
+      list.add(new VariableDeclarator(name, init));
+      if (token.type != Token.COMMA) break;
+      next();
+    }
+    consumeSemicolon();
+    return new VariableDeclaration(list);
+  }
+  
+  Statement parseEmptyStatement() {
+    consume(Token.SEMICOLON); 
+    return new EmptyStatement();
+  }
+  
+  Statement parseExpressionStatement() {
+    return new ExpressionStatement(parseExpression());
+  }
+  
+  Statement parseIf() {
+    assert(token.value == 'if');
+    consume(Token.NAME);
+    consume(Token.LPAREN);
+    Expression condition = parseExpression();
+    consume(Token.RPAREN);
+    Statement thenBody = parseStatement();
+    Statement elseBody;
+    if (tryName('else')) {
+      elseBody = parseStatement();
+    }
+    return new IfStatement(condition, thenBody, elseBody);
+  }
+  
+  Statement parseDoWhile() {
+    assert(token.value == 'do');
+    consume(Token.NAME);
+    Statement body = parseStatement();
+    consumeName('while');
+    consume(Token.LPAREN);
+    Expression condition = parseExpression();
+    consume(Token.RPAREN);
+    return new DoWhileStatement(body, condition);
+  }
+  
+  Statement parseWhile() {
+    assert(token.value == 'while');
+    consume(Token.NAME);
+    consume(Token.LPAREN);
+    Expression condition = parseExpression();
+    consume(Token.RPAREN);
+    Statement body = parseStatement();
+    return new WhileStatement(condition, body);
+  }
+  
+  Statement parseFor() {
+    assert(token.value == 'for');
+    consume(Token.NAME);
+    consume(Token.LPAREN);
+    Expression exp1;
+    if (token.type != Token.SEMICOLON) {
+      exp1 = parseExpression(allowIn: false);
+    }
+    if (exp1 != null && tryName('in')) {
+      Expression exp2 = parseExpression();
+      consume(Token.RPAREN);
+      Statement body = parseStatement();
+      return new ForInStatement(exp1, exp2, body);
+    } else {
+      consume(Token.SEMICOLON);
+      Expression exp2, exp3;
+      if (token.type != Token.SEMICOLON) {
+        exp2 = parseExpression();
+      }
+      consume(Token.SEMICOLON);
+      if (token.type != Token.RPAREN) {
+        exp3 = parseExpression();
+      }
+      consume(Token.RPAREN);
+      Statement body = parseStatement();
+      return new ForStatement(exp1, exp2, exp3, body);
+    }
+  }
+  
+  Statement parseContinue() {
+    assert(token.value == 'continue');
+    consume(Token.NAME);
+    Name name;
+    if (token.type == Token.NAME && !token.afterLinebreak) {
+      name = parseName();
+    }
+    consumeSemicolon();
+    return new ContinueStatement(name);
+  }
+  
+  Statement parseBreak() {
+    assert(token.value == 'break');
+    consume(Token.NAME);
+    Name name;
+    if (token.type == Token.NAME && !token.afterLinebreak) {
+      name = parseName();
+    }
+    consumeSemicolon();
+    return new BreakStatement(name);
+  }
+  
+  Statement parseReturn() {
+    assert(token.value == 'return');
+    consume(Token.NAME);
+    Expression exp;
+    if (token.type != Token.SEMICOLON && !token.afterLinebreak) {
+      exp = parseExpression();
+    }
+    consumeSemicolon();
+    return new ReturnStatement(exp);
+  }
+  
+  Statement parseWith() {
+    assert(token.value == 'with');
+    consume(Token.NAME);
+    consume(Token.LPAREN);
+    Expression exp = parseExpression();
+    consume(Token.RPAREN);
+    Statement body = parseStatement();
+    return new WithStatement(exp, body);
+  }
+  
+  Statement parseSwitch() {
+    assert(token.value == 'switch');
+    consume(Token.NAME);
+    consume(Token.LPAREN);
+    Expression argument = parseExpression();
+    consume(Token.RPAREN);
+    consume(Token.LBRACE);
+    List<SwitchCase> cases = <SwitchCase>[];
+    cases.add(parseSwitchCaseHead());
+    while (token.type != Token.RBRACE) {
+      if (tryName('case') || tryName('default')) {
+        cases.add(parseSwitchCaseHead());
+      } else {
+        cases.last.body.add(parseStatement());
+      }
+    }
+    consume(Token.RBRACE);
+    return new SwitchStatement(argument, cases);
+  }
+  
+  /// Parses a single 'case E:' or 'default:' without the following statements
+  SwitchCase parseSwitchCaseHead() {
+    Token tok = requireNext(Token.NAME);
+    if (tok.value == 'case') {
+      consume(Token.COLON);
+      return new SwitchCase(parseExpression(), <Statement>[]);
+    } else if (tok.value == 'default') {
+      consume(Token.COLON);
+      return new SwitchCase(null, <Statement>[]);
+    } else {
+      throw "Unexpected token $tok"; // TODO: error management
+    }
+  }
+  
+  Statement parseLabeledStatement() {
+    Name name = parseName();
+    consume(Token.COLON);
+    Statement body = parseStatement();
+    return new LabeledStatement(name, body);
+  }
+  
+  Statement parseThrow() {
+    assert(token.value == 'throw');
+    consume(Token.NAME);
+    Expression exp = parseExpression();
+    consumeSemicolon();
+    return new ThrowStatement(exp);
+  }
+
+  Statement parseTry() {
+    assert(token.value == 'try');
+    consume(Token.NAME);
+    BlockStatement body = parseBlock();
+    CatchClause handler;
+    BlockStatement finalizer;
+    if (tryName('catch')) {
+      consume(Token.LPAREN);
+      Name name = parseName();
+      consume(Token.RPAREN);
+      BlockStatement catchBody = parseBlock();
+      handler = new CatchClause(name, catchBody);
+    }
+    if (tryName('finally')) {
+      finalizer = parseBlock();
+    }
+    return new TryStatement(body, handler, finalizer);
+  }
+  
+  Statement parseDebuggerStatement() {
+    assert(token.value == 'debugger');
+    consume(Token.NAME);
+    consumeSemicolon();
+    return new DebuggerStatement();
+  }
+  
+  Statement parseStatement() {
+    if (token.type == Token.LBRACE)
+      return parseBlock();
+    if (token.type == Token.SEMICOLON)
+      return parseEmptyStatement();
+    if (token.type != Token.NAME)
+      return parseExpressionStatement();
+    switch (token.value) {
+      case 'var': return parseVariableDeclaration();
+      case 'if': return parseIf();
+      case 'do': return parseDoWhile();
+      case 'while': return parseWhile();
+      case 'for': return parseFor();
+      case 'continue': return parseContinue();
+      case 'break': return parseBreak();
+      case 'return': return parseReturn();
+      case 'with': return parseWith();
+      case 'switch': return parseSwitch();
+      case 'throw': return parseThrow();
+      case 'try': return parseTry();
+      case 'debugger': return parseDebuggerStatement();
+      // TODO: function declaration
+      default:
+        Token maybeLabel = next();
+        
+    }
+  }
   
   
 }

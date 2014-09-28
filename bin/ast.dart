@@ -100,7 +100,7 @@ class IfStatement extends Statement {
   Statement then;
   Statement otherwise; // May be null.
 
-  IfStatement(this.condition, this.then, this.otherwise);
+  IfStatement(this.condition, this.then, [this.otherwise]);
   
   forEach(callback) {
     callback(condition);
@@ -214,6 +214,8 @@ class CatchClause extends Node {
   Name param;
   BlockStatement body;
   
+  CatchClause(this.param, this.body);
+  
   forEach(callback) {
     callback(param);
     callback(body);
@@ -298,7 +300,7 @@ class VariableDeclarator extends Node {
   
   forEach(callback) {
     callback(name);
-    callback(init);
+    if (init != null) callback(init);
   }
 }
 
