@@ -518,8 +518,7 @@ class Lexer {
     while (isNamePart(x)) { // Parse flags
       x = input[++index];
     }
-    // TODO: use slash.position as start index
-    return emitValueToken(Token.REGEXP);
+    return emitToken(Token.REGEXP, new String.fromCharCodes(input.getRange(slash.offset, index)));
   }
   
   Token scanStringLiteral(int x) {
