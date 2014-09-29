@@ -8,6 +8,7 @@ class Token {
   int type;
   String value;
   bool afterLinebreak; // first token after a linebreak?
+  String raw; // for string literals
   
   /// For tokens that can be used as binary operators, this indicates their relative precedence.
   /// Set to -100 for other tokens.
@@ -16,7 +17,7 @@ class Token {
   
   Token(this.offset, this.type, this.afterLinebreak, [this.value]);
   
-  String toString() => value != null ? value : new String.fromCharCode(type);
+  String toString() => value != null ? value : typeToString(type);
   
   String get detailedString => "[$offset, $value, $type, $afterLinebreak]";
   
@@ -27,7 +28,8 @@ class Token {
   static const int ASSIGN = 4; // also compound assignment operators
   static const int UPDATE = 5; // ++ and --
   static const int UNARY = 6; // all unary operators except the names void, delete
-  static const int STRING = 7; 
+  static const int STRING = 7;
+  static const int REGEXP = 8;
   
   // Tokens without a value have type equal to their corresponding char code
   // All these are >31
@@ -42,6 +44,22 @@ class Token {
   static const int SEMICOLON = char.SEMICOLON;
   static const int DOT = char.DOT;
   static const int QUESTION = char.QUESTION;
+  
+  static String typeToString(int type) {
+    if (type > 31)
+      return new String.fromCharCode(type);
+    switch (type) {
+      case EOF: return 'EOF';
+      case NAME: return 'name';
+      case NUMBER: return 'number';
+      case BINARY: return 'binary operator';
+      case ASSIGN: return 'assignment operator';
+      case UPDATE: return 'update operator';
+      case UNARY: return 'unary operator';
+      case STRING: return 'string literal';
+      default: return '[type $type]';
+    }
+  }
 }
 
 class Precedence {
@@ -74,14 +92,10 @@ bool isNamePart(x) => char.$a <= x && x <= char.$z || char.$A <= x && x <= char.
 
 bool isFancyNamePart(x) => x == char.ZWNJ || x == char.ZWJ || x == char.BOM || unicode.isNonspacingMark(x); // TODO: Combining Spacing Mark (Mc) is missing from unicode.
 
-/// Includes ordinary whitespace AND line terminators
+/// Includes ordinary whitespace (not line terminators)
 bool isWhitespace(x) {
   switch (x) {
     case char.SPACE:
-    case char.LF:
-    case char.CR:
-    case char.LS:
-    case char.PS:
     case char.TAB:
     case char.VTAB:
     case char.FF:
@@ -126,12 +140,11 @@ class Lexer {
     return token;
   }
   
-  Token scanNumber() {
-    int x = input[++index];
+  Token scanNumber(int x) {
     if (x == char.$0) {
       x = input[++index];
       if (x == char.$x || x == char.$X) {
-        ++index;
+        x = input[++index];
         return scanHexNumber(x);
       }
     }
@@ -139,7 +152,7 @@ class Lexer {
       x = input[++index];
     }
     if (x == char.DOT) {
-      ++index;
+      x = input[++index];
       return scanDecimalPart(x);
     }
     return scanExponentPart(x);
@@ -248,7 +261,7 @@ class Lexer {
         case char.$7:
         case char.$8:
         case char.$9:
-          return scanNumber();
+          return scanNumber(x);
           
         case char.SPACE: // Note: Exotic whitespace symbols are handled in the default clause.
         case char.TAB:
@@ -338,8 +351,12 @@ class Lexer {
         case char.LT:
           x = input[++index];
           if (x == char.LT) {
-            ++index;
-            return emitToken(Token.BINARY, '<<')..binaryPrecedence = Precedence.RELATIONAL;
+            x = input[++index];
+            if (x == char.EQ) {
+              ++index;
+              return emitToken(Token.ASSIGN, '<<=');
+            }
+            return emitToken(Token.BINARY, '<<')..binaryPrecedence = Precedence.SHIFT;
           }
           if (x == char.EQ) {
             ++index;
@@ -352,10 +369,18 @@ class Lexer {
           if (x == char.GT) {
             x = input[++index];
             if (x == char.GT) {
-              ++index;
-              return emitToken(Token.BINARY, '>>>')..binaryPrecedence = Precedence.RELATIONAL;
+              x = input[++index];
+              if (x == char.EQ) {
+                ++index;
+                return emitToken(Token.ASSIGN, '>>>=');
+              }
+              return emitToken(Token.BINARY, '>>>')..binaryPrecedence = Precedence.SHIFT;
             }
-            return emitToken(Token.BINARY, '>>')..binaryPrecedence = Precedence.RELATIONAL;
+            if (x == char.EQ) {
+              ++index;
+              return emitToken(Token.ASSIGN, '>>=');
+            }
+            return emitToken(Token.BINARY, '>>')..binaryPrecedence = Precedence.SHIFT;
           }
           if (x == char.EQ) {
             ++index;
@@ -463,10 +488,38 @@ class Lexer {
     }
   }
   
+  /// For debugging, returns the string value of the current token range (trimmed to 100 to avoid mega outputs)
+  String get currentTokenString => new String.fromCharCodes(input.getRange(tokenStart, index)).substring(0, 100);
+  
   /// Scan a regular expression literal, where the opening token has already been scanned
+  /// This is called directly from the parser.
   /// The opening token [slash] can be a "/" or a "/=" token
   Token scanRegexpBody(Token slash) {
-    throw "TODO: regular expressions";
+    bool inCharClass = false; // If true, we are inside a bracket. A slash in here does not terminate the literal. They are not nestable.
+    int x = input[index];
+    while (inCharClass || x != char.SLASH) {
+      switch (x) {
+        case char.NULL:
+          throw "Unterminated regexp: $currentTokenString"; // TODO: error management
+        case char.LBRACKET:
+          inCharClass = true;
+          break;
+        case char.RBRACKET:
+          inCharClass = false;
+          break;
+        case char.BACKSLASH:
+          x = input[++index];
+          if (isEOL(x)) throw "Unterminated regexp: $currentTokenString"; // TODO: error management
+          break;
+      }
+      x = input[++index];
+    }
+    x = input[++index]; // Move past the terminating "/"
+    while (isNamePart(x)) { // Parse flags
+      x = input[++index];
+    }
+    // TODO: use slash.position as start index
+    return emitValueToken(Token.REGEXP);
   }
   
   Token scanStringLiteral(int x) {
@@ -563,7 +616,9 @@ class Lexer {
       }
     }
     ++index; // skip ending quote
-    return emitToken(Token.STRING, new String.fromCharCodes(buffer));
+    String value = new String.fromCharCodes(buffer);
+    String raw = new String.fromCharCodes(input.getRange(tokenStart, index));
+    return emitToken(Token.STRING, value)..raw = raw;
   }
   
   

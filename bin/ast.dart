@@ -1,4 +1,6 @@
+library ast;
 
+part 'ast_visitor.dart';
 
 // AST structure mostly designed after the Mozilla Parser API:
 //  https://developer.mozilla.org/en-US/docs/Mozilla/Projects/SpiderMonkey/Parser_API
@@ -47,6 +49,8 @@ abstract class Node {
   
   /// Visits the immediate children of this node.
   void forEach(callback(Node node));
+  
+  dynamic visitBy(Visitor visitor);
 }
 
 class Program extends Node {
@@ -59,6 +63,10 @@ class Program extends Node {
   Program(this.body);
   
   void forEach(callback) => body.forEach(callback);
+  
+  String toString() => 'Program';
+  
+  visitBy(Visitor v) => v.visitProgram(this);
 }
 
 /// An identifier. The class is called [Name] simply because it is shorter than "Identifier".
@@ -68,6 +76,10 @@ class Name extends Node {
   Name(this.value);
   
   void forEach(callback) {}
+  
+  String toString() => '$value';
+  
+  visitBy(Visitor v) => v.visitName(this);
 }
 
 
@@ -77,6 +89,10 @@ abstract class Statement extends Node {}
 
 class EmptyStatement extends Statement {
   void forEach(callback) {}
+  
+  String toString() => 'EmptyStatement';
+  
+  visitBy(Visitor v) => v.visitEmptyStatement(this);
 }
 
 class BlockStatement extends Statement {
@@ -85,6 +101,10 @@ class BlockStatement extends Statement {
   BlockStatement(this.body);
   
   void forEach(callback) => body.forEach(callback);
+  
+  String toString() => 'BlockStatement';
+  
+  visitBy(Visitor v) => v.visitBlock(this);
 }
 
 class ExpressionStatement extends Statement {
@@ -93,6 +113,10 @@ class ExpressionStatement extends Statement {
   ExpressionStatement(this.expression);
   
   forEach(callback) => callback(expression);
+  
+  String toString() => 'ExpressionStatement';
+  
+  visitBy(Visitor v) => v.visitExpressionStatement(this);
 }
 
 class IfStatement extends Statement {
@@ -107,6 +131,10 @@ class IfStatement extends Statement {
     callback(then);
     if (otherwise != null) callback(otherwise);
   }
+  
+  String toString() => 'IfStatement';
+  
+  visitBy(Visitor v) => v.visitIf(this);
 }
 
 class LabeledStatement extends Statement {
@@ -119,6 +147,10 @@ class LabeledStatement extends Statement {
     callback(label);
     callback(body);
   }
+  
+  String toString() => 'LabeledStatement';
+  
+  visitBy(Visitor v) => v.visitLabeledStatement(this);
 }
 
 class BreakStatement extends Statement {
@@ -129,6 +161,10 @@ class BreakStatement extends Statement {
   forEach(callback) {
     if (label != null) callback(label);
   }
+  
+  String toString() => 'BreakStatement';
+  
+  visitBy(Visitor v) => v.visitBreak(this);
 }
 
 class ContinueStatement extends Statement {
@@ -139,6 +175,10 @@ class ContinueStatement extends Statement {
   forEach(callback) {
     if (label != null) callback(label);
   }
+  
+  String toString() => 'ContinueStatement';
+  
+  visitBy(Visitor v) => v.visitContinue(this);
 }
 
 class WithStatement extends Statement {
@@ -151,6 +191,10 @@ class WithStatement extends Statement {
     callback(object);
     callback(body);
   }
+  
+  String toString() => 'WithStatement';
+  
+  visitBy(Visitor v) => v.visitWith(this);
 }
 
 class SwitchStatement extends Statement {
@@ -163,6 +207,10 @@ class SwitchStatement extends Statement {
     callback(argument);
     cases.forEach(callback);
   }
+  
+  String toString() => 'SwitchStatement';
+  
+  visitBy(Visitor v) => v.visitSwitch(this);
 }
 
 class SwitchCase extends Node {
@@ -178,6 +226,10 @@ class SwitchCase extends Node {
     if (expression != null) callback(expression);
     body.forEach(callback);
   }
+  
+  String toString() => 'SwitchCase';
+  
+  visitBy(Visitor v) => v.visitSwitchCase(this);
 }
 
 class ReturnStatement extends Statement {
@@ -185,7 +237,11 @@ class ReturnStatement extends Statement {
 
   ReturnStatement(this.argument);
   
-  forEach(callback) => callback(argument);
+  forEach(callback) => argument != null ? callback(argument) : null;
+  
+  String toString() => 'ReturnStatement';
+  
+  visitBy(Visitor v) => v.visitReturn(this);
 }
 
 class ThrowStatement extends Statement {
@@ -194,20 +250,28 @@ class ThrowStatement extends Statement {
   ThrowStatement(this.argument);
 
   forEach(callback) => callback(argument);
+  
+  String toString() => 'ThrowStatement';
+  
+  visitBy(Visitor v) => v.visitThrow(this);
 }
 
 class TryStatement extends Statement {
   BlockStatement block;
   CatchClause handler; // May be null
-  BlockStatement finalizers; // May be null (but not if handler is null)
+  BlockStatement finalizer; // May be null (but not if handler is null)
 
-  TryStatement(this.block, this.handler, this.finalizers);
+  TryStatement(this.block, this.handler, this.finalizer);
   
   forEach(callback) {
     callback(block);
     if (handler != null) callback(handler);
-    if (finalizers != null) callback(finalizers);
+    if (finalizer != null) callback(finalizer);
   }
+  
+  String toString() => 'TryStatement';
+  
+  visitBy(Visitor v) => v.visitTry(this);
 }
 
 class CatchClause extends Node {
@@ -220,6 +284,10 @@ class CatchClause extends Node {
     callback(param);
     callback(body);
   }
+  
+  String toString() => 'CatchClause';
+  
+  visitBy(Visitor v) => v.visitCatch(this);
 }
 
 class WhileStatement extends Statement {
@@ -232,6 +300,10 @@ class WhileStatement extends Statement {
     callback(condition);
     callback(body);
   }
+  
+  String toString() => 'WhileStatement';
+  
+  visitBy(Visitor v) => v.visitWhile(this);
 }
 
 class DoWhileStatement extends Statement {
@@ -244,6 +316,10 @@ class DoWhileStatement extends Statement {
     callback(body);
     callback(condition);
   }
+  
+  String toString() => 'DoWhileStatement';
+  
+  visitBy(Visitor v) => v.visitDoWhile(this);
 }
 
 class ForStatement extends Statement {
@@ -260,6 +336,10 @@ class ForStatement extends Statement {
     if (update != null) callback(update);
     callback(body);
   }
+  
+  String toString() => 'ForStatement';
+  
+  visitBy(Visitor v) => v.visitFor(this);
 }
 
 class ForInStatement extends Statement {
@@ -274,6 +354,10 @@ class ForInStatement extends Statement {
     callback(right);
     callback(body);
   }
+  
+  String toString() => 'ForInStatement';
+  
+  visitBy(Visitor v) => v.visitForIn(this);
 }
 
 class FunctionDeclaration extends Statement {
@@ -282,6 +366,10 @@ class FunctionDeclaration extends Statement {
   FunctionDeclaration(this.function);
   
   forEach(callback) => callback(function);
+  
+  String toString() => 'FunctionDeclaration';
+  
+  visitBy(Visitor v) => v.visitFunctionDeclaration(this);
 }
 
 class VariableDeclaration extends Statement {
@@ -290,6 +378,10 @@ class VariableDeclaration extends Statement {
   VariableDeclaration(this.declarations);
   
   forEach(callback) => declarations.forEach(callback);
+  
+  String toString() => 'VariableDeclaration';
+  
+  visitBy(Visitor v) => v.visitVariableDeclaration(this);
 }
 
 class VariableDeclarator extends Node {
@@ -302,10 +394,18 @@ class VariableDeclarator extends Node {
     callback(name);
     if (init != null) callback(init);
   }
+  
+  String toString() => 'VariableDeclarator';
+  
+  visitBy(Visitor v) => v.visitVariableDeclarator(this);
 }
 
 class DebuggerStatement extends Statement {
   forEach(callback) {}
+  
+  String toString() => 'DebuggerStatement';
+  
+  visitBy(Visitor v) => v.visitDebugger(this);
 }
 
 ///////
@@ -314,6 +414,10 @@ abstract class Expression extends Node {}
 
 class ThisExpression extends Expression {
   forEach(callback) {}
+  
+  String toString() => 'ThisExpression';
+  
+  visitBy(Visitor v) => v.visitThis(this);
 }
 
 class ArrayExpression extends Expression {
@@ -322,6 +426,10 @@ class ArrayExpression extends Expression {
   ArrayExpression(this.expressions);
 
   forEach(callback) => expressions.forEach(callback);
+  
+  String toString() => 'ArrayExpression';
+  
+  visitBy(Visitor v) => v.visitArray(this);
 }
 
 class ObjectExpression extends Expression {
@@ -330,10 +438,14 @@ class ObjectExpression extends Expression {
   ObjectExpression(this.properties);
   
   forEach(callback) => properties.forEach(callback);
+  
+  String toString() => 'ObjectExpression';
+  
+  visitBy(Visitor v) => v.visitObject(this);
 }
 
 class Property extends Node {
-  Name key;           // Literals will be converted to their equivalent name string
+  Node key;           // Literal or Name
   Expression value;   // Will be FunctionExpression with no name for getters and setters
   String kind;        // May be: init, get, set
 
@@ -345,6 +457,8 @@ class Property extends Node {
   bool get isGetter => kind == 'get';
   bool get isSetter => kind == 'set';
   
+  String get nameString => key is Name ? (key as Name).value : (key as LiteralExpression).value.toString();
+  
   /// Returns the value as a FunctionExpression. Useful for getters/setters.
   FunctionExpression get function => value as FunctionExpression;
 
@@ -352,6 +466,10 @@ class Property extends Node {
     callback(key);
     callback(value);
   }
+  
+  String toString() => 'Property';
+  
+  visitBy(Visitor v) => v.visitProperty(this);
 }
 
 class FunctionExpression extends Expression {
@@ -368,6 +486,10 @@ class FunctionExpression extends Expression {
     params.forEach(callback);
     callback(body);
   }
+  
+  String toString() => 'FunctionExpression';
+  
+  visitBy(Visitor v) => v.visitFunctionExpression(this);
 }
 
 class SequenceExpression extends Expression {
@@ -376,6 +498,10 @@ class SequenceExpression extends Expression {
   SequenceExpression(this.expressions);
   
   forEach(callback) => expressions.forEach(callback);
+  
+  String toString() => 'SequenceExpression';
+  
+  visitBy(Visitor v) => v.visitSequence(this);
 }
 
 class UnaryExpression extends Expression {
@@ -385,11 +511,15 @@ class UnaryExpression extends Expression {
   UnaryExpression(this.operator, this.argument);
   
   forEach(callback) => callback(argument);
+  
+  String toString() => 'UnaryExpression';
+  
+  visitBy(Visitor v) => v.visitUnary(this);
 }
 
 class BinaryExpression extends Expression {
   Expression left;
-  String operator; // May be: ==, !=, ===, !==, <, <=, >, >=, <<, >>, >>>, +, -, *, /, %, |, ^, &, in, instanceof
+  String operator; // May be: ==, !=, ===, !==, <, <=, >, >=, <<, >>, >>>, +, -, *, /, %, |, ^, &, &&, ||, in, instanceof
   Expression right;
 
   BinaryExpression(this.left, this.operator, this.right);
@@ -398,6 +528,10 @@ class BinaryExpression extends Expression {
     callback(left);
     callback(right);
   }
+  
+  String toString() => 'BinaryExpression';
+  
+  visitBy(Visitor v) => v.visitBinary(this);
 }
 
 class AssignmentExpression extends Expression {
@@ -413,6 +547,10 @@ class AssignmentExpression extends Expression {
     callback(left);
     callback(right);
   }
+  
+  String toString() => 'AssignmentExpression';
+  
+  visitBy(Visitor v) => v.visitAssignment(this);
 }
 
 class UpdateExpression extends Expression {
@@ -425,19 +563,10 @@ class UpdateExpression extends Expression {
   UpdateExpression.postfix(this.operator, this.argument) : isPrefix = false;
   
   forEach(callback) => callback(argument);
-}
-
-class LogicalExpression extends Expression {
-  Expression left;
-  String operator; // May be: &&, ||
-  Expression right;
-
-  LogicalExpression(this.left, this.operator, this.right);
   
-  forEach(callback) {
-    callback(left);
-    callback(right);
-  }
+  String toString() => 'UpdateExpression';
+  
+  visitBy(Visitor v) => v.visitUpdateExpression(this);
 }
 
 class ConditionalExpression extends Expression {
@@ -452,6 +581,10 @@ class ConditionalExpression extends Expression {
     callback(then);
     callback(otherwise);
   }
+  
+  String toString() => 'ConditionalExpression';
+  
+  visitBy(Visitor v) => v.visitConditional(this);
 }
 
 class NewExpression extends Expression {
@@ -464,6 +597,10 @@ class NewExpression extends Expression {
     callback(callee);
     arguments.forEach(callback);
   }
+  
+  String toString() => 'NewExpression';
+  
+  visitBy(Visitor v) => v.visitNew(this);
 }
 
 class CallExpression extends Expression {
@@ -476,6 +613,10 @@ class CallExpression extends Expression {
     callback(callee);
     arguments.forEach(callback);
   }
+  
+  String toString() => 'CallExpression';
+  
+  visitBy(Visitor v) => v.visitCall(this);
 }
 
 class MemberExpression extends Expression {
@@ -488,6 +629,10 @@ class MemberExpression extends Expression {
     callback(object);
     callback(property);
   }
+  
+  String toString() => 'MemberExpression';
+  
+  visitBy(Visitor v) => v.visitMember(this);
 }
 
 class IndexExpression extends Expression {
@@ -500,6 +645,10 @@ class IndexExpression extends Expression {
     callback(object);
     callback(property);
   }
+  
+  String toString() => 'IndexExpression';
+  
+  visitBy(Visitor v) => v.visitIndex(this);
 }
 
 class NameExpression extends Expression {
@@ -508,12 +657,17 @@ class NameExpression extends Expression {
   NameExpression(this.name);
   
   forEach(callback) => callback(name);
+  
+  String toString() => 'NameExpression';
+  
+  visitBy(Visitor v) => v.visitNameExpression(this);
 }
 
 class LiteralExpression extends Expression {
   dynamic value;
+  String raw;
   
-  LiteralExpression(this.value);
+  LiteralExpression(this.value, [this.raw]);
   
   bool get isString => value is String;
   bool get isNumber => value is num;
@@ -528,14 +682,21 @@ class LiteralExpression extends Expression {
   String get toName => value.toString();
   
   forEach(callback) {}
+  
+  String toString() => 'LiteralExpression';
+  
+  visitBy(Visitor v) => v.visitLiteral(this);
 }
 
 class RegexpExpression extends Expression {
-  String regexp; // Includes slashes and everything (TODO: separate into regexp and flags)
+  String regexp; // Includes slashes and flags and everything (TODO: separate into regexp and flags)
   
   RegexpExpression(this.regexp);
   
   forEach(callback) {}
+  
+  String toString() => 'RegexpExpression';
+  
+  visitBy(Visitor v) => v.visitRegexp(this);
 }
-
 

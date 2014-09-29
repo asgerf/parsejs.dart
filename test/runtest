@@ -1,0 +1,8 @@
+set -e
+dart tojson.dart $1 > tmp/mine.json
+node esprim.js $1 > tmp/correct.json
+
+json -f tmp/mine.json > tmp/mine1.json
+json -f tmp/correct.json > tmp/correct1.json
+
+diff tmp/mine1.json tmp/correct1.json

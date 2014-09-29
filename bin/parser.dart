@@ -3,15 +3,52 @@ library parser;
 import 'lexer.dart';
 import 'ast.dart';
 
+class ParseError {
+  String msg;
+  int position;
+  
+  ParseError(this.msg, this.position);
+  
+  String toString() => msg;
+}
+
 class Parser {
+  
+  Parser(this.lexer) {
+    token = lexer.scan();
+  }
   
   Lexer lexer;
   Token token;
   
+  Token pushbackBuffer;
+  
+  void pushback(Token tok) {
+    pushbackBuffer = token;
+    token = tok;
+  }
+  
+  dynamic fail({Token tok, String expected, String message}) {
+    if (tok == null)
+      tok = token;
+    if (message == null) {
+      if (expected != null)
+        message = "Expected $expected but found $tok";
+      else
+        message = "Unexpected token $tok";
+    }
+    throw new ParseError(message, tok.offset);
+  }
+  
   /// Returns the current token, and scans the next one. 
   Token next() {
     Token t = token;
-    token = lexer.scan();
+    if (pushbackBuffer != null) {
+      token = pushbackBuffer;
+      pushbackBuffer = null;
+    } else {
+      token = lexer.scan();
+    }
     return t;
   }
   
@@ -21,24 +58,21 @@ class Parser {
       next();
       return;
     }
-    if (token.afterLinebreak) {
+    if (token.afterLinebreak || token.type == Token.RBRACE || token.type == Token.EOF) {
       return;
     }
-    if (token.type == Token.EOF) {
-      return;
-    }
-    throw "Expected semicolon";
+    fail(expected: 'semicolon');
   }
   
   void consume(int type) {
     if (token.type != type) {
-      throw "Unexpected token: $token ${token.detailedString}";
+      fail(expected: Token.typeToString(type));
     }
     next();
   }
   Token requireNext(int type) {
     if (token.type != type) {
-      throw "Unexpected token: $token ${token.detailedString}";
+      fail(expected: Token.typeToString(type));
     }
     return next();
   }
@@ -64,7 +98,7 @@ class Parser {
   }
   
   BlockStatement parseFunctionBody() {
-    return null;
+    return parseBlock();
   }
   
   FunctionExpression parseFunctionExpression() {
@@ -84,23 +118,32 @@ class Parser {
   Expression parsePrimary() {
     switch (token.type) {
       case Token.NAME:
-        Token name = next();
-        switch (name.value) {
-          case 'this': return new ThisExpression();
-          case 'true': return new LiteralExpression(true);
-          case 'false': return new LiteralExpression(false);
-          case 'null': return new LiteralExpression(null);
-          case 'function': return parseFunctionExpression();
+        switch (token.value) {
+          case 'this': 
+            next();
+            return new ThisExpression();
+          case 'true': 
+            next();
+            return new LiteralExpression(true, 'true');
+          case 'false': 
+            next();
+            return new LiteralExpression(false, 'false');
+          case 'null': 
+            next();
+            return new LiteralExpression(null, 'null');
+          case 'function': 
+            return parseFunctionExpression();
         }
+        Token name = next();
         return new NameExpression(new Name(name.value));
         
       case Token.NUMBER:
         Token tok = next();
-        return new LiteralExpression(double.parse(tok.value));
+        return new LiteralExpression(num.parse(tok.value), tok.value);
         
       case Token.STRING:
         Token tok = next();
-        return new LiteralExpression(tok.value);
+        return new LiteralExpression(tok.value, tok.raw);
         
       case Token.LBRACKET:
         return parseArrayLiteral();
@@ -121,10 +164,10 @@ class Parser {
           next();
           return new RegexpExpression(regexTok.value);
         }
-        throw "Unexpected token: $token";
+        return fail();
         
       default:
-        throw "Unexpected token: $token";
+        return fail();
     }
   }
   
@@ -146,25 +189,33 @@ class Parser {
     return new ArrayExpression(expressions);
   }
   
-  Name makePropertyName(Token tok) => new Name(tok.value.toString()); // TODO: check token type to detect errors
+  Node makePropertyName(Token tok) {
+    switch (tok.type) {
+      case Token.NAME: return new Name(tok.value);
+      case Token.STRING: return new LiteralExpression(tok.value)..raw = tok.raw;
+      case Token.NUMBER: return new LiteralExpression(double.parse(tok.value))..raw = tok.value;
+      default: return fail(tok: tok, expected: 'property name');
+    }
+  }
   
   Property parseProperty() {
     Token nameTok = next();
     if (token.type == Token.COLON) {
       next(); // skip colon
-      Name name = makePropertyName(nameTok);
+      Node name = makePropertyName(nameTok);
       Expression value = parseAssignment();
       return new Property(name, value);
     }
     if (nameTok.type == Token.NAME && (nameTok.value == 'get' || nameTok.value == 'set')) {
+      String kind = nameTok.value == 'get' ? 'get' : 'set'; // internalize the string
       nameTok = next();
-      Name name = makePropertyName(nameTok);
+      Node name = makePropertyName(nameTok);
       List<Name> params = parseParameters();
       BlockStatement body = parseFunctionBody();
       Expression value = new FunctionExpression(null, params, body);
-      return new Property(name, value, nameTok.value == 'get' ? 'get' : 'set'); // (internalize the get/set strings)
+      return new Property(name, value, kind); // (internalize the get/set strings)
     }
-    throw "Invalid property: $nameTok $token";
+    return fail(expected: 'property');
   }
   
   Expression parseObjectLiteral() {
@@ -225,6 +276,9 @@ class Parser {
           break loop;
       }
     }
+    if (newTok != null) {
+      exp = new NewExpression(exp, <Expression>[]);
+    }
     return exp;
   }
   
@@ -258,16 +312,16 @@ class Parser {
     switch (token.type) {
       case Token.UNARY:
         Token operator = next();
-        return new UnaryExpression(operator.value, parsePostfix());
+        return new UnaryExpression(operator.value, parseUnary());
         
       case Token.UPDATE:
         Token operator = next();
-        return new UpdateExpression.prefix(operator.value, parsePostfix());
+        return new UpdateExpression.prefix(operator.value, parseUnary());
         
       case Token.NAME:
         if (token.value == 'delete' || token.value == 'void' || token.value == 'typeof') {
           Token operator = next();
-          return new UnaryExpression(operator.value, parsePostfix());
+          return new UnaryExpression(operator.value, parseUnary());
         }
         break;
     }
@@ -288,6 +342,7 @@ class Parser {
   Expression parseConditional(bool allowIn) {
     Expression exp = parseBinary(Precedence.EXPRESSION, allowIn);
     if (token.type == Token.QUESTION) {
+      next();
       Expression thenExp = parseAssignment();
       consume(Token.COLON);
       Expression elseExp = parseAssignment(allowIn: allowIn);
@@ -323,9 +378,13 @@ class Parser {
   
   void consumeName(String name) {
     if (token.type != Token.NAME || token.value != name) {
-      throw "Unexpected token $token, expected $name";
+      fail(expected: name);
     }
     next();
+  }
+  
+  bool peekName(String name) {
+    return token.type == Token.NAME && token.value == name;
   }
   
   bool tryName(String name) {
@@ -347,7 +406,7 @@ class Parser {
     return new BlockStatement(list);
   }
   
-  VariableDeclaration parseVariableDeclaration() {
+  VariableDeclaration parseVariableDeclarationList({bool allowIn: true}) {
     assert(token.value == 'var');
     consume(Token.NAME);
     List<VariableDeclarator> list = <VariableDeclarator>[];
@@ -356,17 +415,22 @@ class Parser {
       Expression init = null;
       if (token.type == Token.ASSIGN) {
         if (token.value != '=') {
-          throw "Compound assignment in initializer"; // TODO: error management
+          fail(message: 'Compound assignment in initializer');
         }
         next();
-        init = parseAssignment();
+        init = parseAssignment(allowIn: allowIn);
       }
       list.add(new VariableDeclarator(name, init));
       if (token.type != Token.COMMA) break;
       next();
     }
-    consumeSemicolon();
     return new VariableDeclaration(list);
+  }
+  
+  VariableDeclaration parseVariableDeclarationStatement() {
+    VariableDeclaration decl = parseVariableDeclarationList();
+    consumeSemicolon();
+    return decl;
   }
   
   Statement parseEmptyStatement() {
@@ -375,7 +439,9 @@ class Parser {
   }
   
   Statement parseExpressionStatement() {
-    return new ExpressionStatement(parseExpression());
+    Expression exp = parseExpression();
+    consumeSemicolon();
+    return new ExpressionStatement(exp);
   }
   
   Statement parseIf() {
@@ -400,6 +466,7 @@ class Parser {
     consume(Token.LPAREN);
     Expression condition = parseExpression();
     consume(Token.RPAREN);
+    consumeSemicolon();
     return new DoWhileStatement(body, condition);
   }
   
@@ -417,11 +484,16 @@ class Parser {
     assert(token.value == 'for');
     consume(Token.NAME);
     consume(Token.LPAREN);
-    Expression exp1;
-    if (token.type != Token.SEMICOLON) {
+    Node exp1;
+    if (token.type == Token.NAME && token.value == 'var') {
+      exp1 = parseVariableDeclarationList(allowIn: false);
+    } else if (token.type != Token.SEMICOLON) {
       exp1 = parseExpression(allowIn: false);
     }
     if (exp1 != null && tryName('in')) {
+      if (exp1 is VariableDeclaration && (exp1 as VariableDeclaration).declarations.length > 1) {
+        fail(message: 'Multiple vars declared in for-in loop');
+      }
       Expression exp2 = parseExpression();
       consume(Token.RPAREN);
       Statement body = parseStatement();
@@ -468,7 +540,7 @@ class Parser {
     assert(token.value == 'return');
     consume(Token.NAME);
     Expression exp;
-    if (token.type != Token.SEMICOLON && !token.afterLinebreak) {
+    if (token.type != Token.SEMICOLON && token.type != Token.RBRACE && token.type != Token.EOF && !token.afterLinebreak) {
       exp = parseExpression();
     }
     consumeSemicolon();
@@ -495,7 +567,7 @@ class Parser {
     List<SwitchCase> cases = <SwitchCase>[];
     cases.add(parseSwitchCaseHead());
     while (token.type != Token.RBRACE) {
-      if (tryName('case') || tryName('default')) {
+      if (peekName('case') || peekName('default')) {
         cases.add(parseSwitchCaseHead());
       } else {
         cases.last.body.add(parseStatement());
@@ -509,21 +581,15 @@ class Parser {
   SwitchCase parseSwitchCaseHead() {
     Token tok = requireNext(Token.NAME);
     if (tok.value == 'case') {
+      Expression value = parseExpression();
       consume(Token.COLON);
-      return new SwitchCase(parseExpression(), <Statement>[]);
+      return new SwitchCase(value, <Statement>[]);
     } else if (tok.value == 'default') {
       consume(Token.COLON);
       return new SwitchCase(null, <Statement>[]);
     } else {
-      throw "Unexpected token $tok"; // TODO: error management
+      return fail();
     }
-  }
-  
-  Statement parseLabeledStatement() {
-    Name name = parseName();
-    consume(Token.COLON);
-    Statement body = parseStatement();
-    return new LabeledStatement(name, body);
   }
   
   Statement parseThrow() {
@@ -560,6 +626,15 @@ class Parser {
     return new DebuggerStatement();
   }
   
+  Statement parseFunctionDeclaration() {
+    assert(token.value == 'function');
+    FunctionExpression func = parseFunctionExpression();
+    if (func.name == null) {
+      fail(message: 'Function declaration must have a name');
+    }
+    return new FunctionDeclaration(func);
+  }
+  
   Statement parseStatement() {
     if (token.type == Token.LBRACE)
       return parseBlock();
@@ -568,7 +643,7 @@ class Parser {
     if (token.type != Token.NAME)
       return parseExpressionStatement();
     switch (token.value) {
-      case 'var': return parseVariableDeclaration();
+      case 'var': return parseVariableDeclarationStatement();
       case 'if': return parseIf();
       case 'do': return parseDoWhile();
       case 'while': return parseWhile();
@@ -581,13 +656,28 @@ class Parser {
       case 'throw': return parseThrow();
       case 'try': return parseTry();
       case 'debugger': return parseDebuggerStatement();
-      // TODO: function declaration
+      case 'function': return parseFunctionDeclaration();
       default:
-        Token maybeLabel = next();
-        
+        Token nameTok = next();
+        if (token.type == Token.COLON) {
+          next();
+          Statement body = parseStatement();
+          return new LabeledStatement(new Name(nameTok.value), body);
+        } else {
+          // revert lookahead and parse as expression statement
+          pushback(nameTok);
+          return parseExpressionStatement();
+        }
     }
   }
   
+  Program parseProgram() {
+    List<Statement> statements = <Statement>[];
+    while (token.type != Token.EOF) {
+      statements.add(parseStatement());
+    }
+    return new Program(statements);
+  }
   
 }
 
