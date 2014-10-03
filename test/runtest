@@ -1,18 +1,17 @@
 set -e
 
-rm tmp/*
-
 BASEDIR=$(dirname $0)
 
 if (($# == 0)); then
-	FILES=$(find $1 testcases | grep '.js')
+	rm -f tmp/*
+	FILES=$(find testcases | grep '.js')
 	BASEDIR='testcases'
 elif [[ -d $1 ]]; then
-	FILES=$(find $1 . | grep '.js')
+	FILES=$(find $1 | grep '.js')
 	BASEDIR="$1"
 else
 	FILES=$*
-	if ((#$ == 1)); then
+	if (($# == 1)); then
 		SINGLE=true
 	fi
 fi
@@ -39,7 +38,8 @@ do
 		rm -f tmp/$name.esprima.err
 	else
 		cat $file >> tmp/$name.esprima.err
-		echo "[OK] [ESPRIMA EXCEPTION]"
+		rm $file
+		echo "[OK] [ESPRIMA EXCEPTION] [DELETED!]"
 		continue
 	fi
 

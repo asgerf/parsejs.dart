@@ -4,22 +4,24 @@ import 'charcode.dart' as char;
 import 'package:unicode/unicode.dart' as unicode;
 
 class Token {
-  int offset;
+  int startOffset;
   int type;
-  String value;
-  bool afterLinebreak; // first token after a linebreak?
-  String raw; // for string literals
+  String text; // text exactly as in source code
+  bool afterLinebreak; // true if first token after a linebreak
+  String value; // value of string literal, null for other tokens
   
   /// For tokens that can be used as binary operators, this indicates their relative precedence.
   /// Set to -100 for other tokens.
   /// Token type can be BINARY, or UNARY (+,-) or NAME (instanceof,in).
   int binaryPrecedence = -100;
   
-  Token(this.offset, this.type, this.afterLinebreak, [this.value]);
+  Token(this.startOffset, this.type, this.afterLinebreak, this.text);
   
-  String toString() => value != null ? value : typeToString(type);
+  String toString() => text != null ? text : typeToString(type);
   
-  String get detailedString => "[$offset, $value, $type, $afterLinebreak]";
+  String get detailedString => "[$startOffset, $text, $type, $afterLinebreak]";
+  
+  int get endOffset => startOffset + (text == null ? 1 : text.length);
   
   static const int EOF = 0;
   static const int NAME = 1;
@@ -77,7 +79,7 @@ class Precedence {
   static const int MULTIPLICATIVE = 11;
 }
 
-bool isLetter(x) => (char.$a <= x && x <= char.$z) || (char.$A <= x && x <= char.$Z) || x > 0x100 && isFancyLetter(x);
+bool isLetter(x) => (char.$a <= x && x <= char.$z) || (char.$A <= x && x <= char.$Z) || x > 127 && isFancyLetter(x);
 
 bool isFancyLetter(x) => unicode.isUppercaseLetter(x) || unicode.isLowercaseLetter(x) || unicode.isTitlecaseLetter(x) || 
                          unicode.isModifierLetter(x) || unicode.isOtherLetter(x) || unicode.isLetterNumber(x);
@@ -88,7 +90,7 @@ bool isNameStart(x) => isLetter(x) || x == char.DOLLAR || x == char.UNDERSCORE;
 
 bool isNamePart(x) => char.$a <= x && x <= char.$z || char.$A <= x && x <= char.$Z || char.$0 <= x && x <= char.$9 ||
                       x == char.DOLLAR || x == char.UNDERSCORE ||
-                      x >= 0x100 && (isFancyLetter(x) || unicode.isDecimalNumber(x) || isFancyNamePart(x));
+                      x >= 127 && (isFancyLetter(x) || unicode.isDecimalNumber(x) || isFancyNamePart(x));
 
 bool isFancyNamePart(x) => x == char.ZWNJ || x == char.ZWJ || x == char.BOM || unicode.isNonspacingMark(x); // TODO: Combining Spacing Mark (Mc) is missing from unicode.
 
@@ -134,7 +136,7 @@ class Lexer {
   /// Annotates a NAME token with precedence information before returning it.
   /// This is so 'instanceof' and 'in' can be used as both names and binary operators.
   Token addNamePrecedence(Token token) {
-    if (token.value == 'instanceof' || token.value == 'in') {
+    if (token.text == 'instanceof' || token.text == 'in') {
       token.binaryPrecedence = Precedence.RELATIONAL;
     }
     return token;
@@ -518,7 +520,7 @@ class Lexer {
     while (isNamePart(x)) { // Parse flags
       x = input[++index];
     }
-    return emitToken(Token.REGEXP, new String.fromCharCodes(input.getRange(slash.offset, index)));
+    return emitToken(Token.REGEXP, new String.fromCharCodes(input.getRange(slash.startOffset, index)));
   }
   
   Token scanStringLiteral(int x) {
@@ -617,8 +619,7 @@ class Lexer {
     ++index; // skip ending quote
     // XXX: don't build two separate strings if there were no escape sequences
     String value = new String.fromCharCodes(buffer);
-    String raw = new String.fromCharCodes(input.getRange(tokenStart, index));
-    return emitToken(Token.STRING, value)..raw = raw;
+    return emitValueToken(Token.STRING)..value = value;
   }
   
   

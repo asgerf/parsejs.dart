@@ -257,9 +257,12 @@ class Ast2Json extends Visitor {
   
   visitNameExpression(NameExpression node) => visit(node.name);
   
+  // Some values cannot be encoded in JSON. We simply represent these as null.
+  bool isUnencodable(x) => x == double.INFINITY || x == double.NEGATIVE_INFINITY || x == double.NAN;
+  
   visitLiteral(LiteralExpression node) => {
     'type': 'Literal',
-    'value': node.value,
+    'value': isUnencodable(node.value) ? null : node.value,
     'raw': node.raw
   };
   

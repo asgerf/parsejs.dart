@@ -19,7 +19,7 @@ void printAST(Node node) {
 
 void main() {
 
-  String filename = 'testcases/own/keywords.js';
+  String filename = '../benchmarks/deltablue.js';
   
   new File(filename).readAsString().then((String text) {
     Lexer lexer = new Lexer(text);
