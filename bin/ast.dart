@@ -651,6 +651,8 @@ class IndexExpression extends Expression {
   visitBy(Visitor v) => v.visitIndex(this);
 }
 
+/// A [Name] that is used as an expression. 
+/// Note that "undefined", "NaN", and "Infinity" are name expressions, and not literals and one might expect.
 class NameExpression extends Expression {
   Name name;
 

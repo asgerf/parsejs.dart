@@ -3,7 +3,7 @@ import '../bin/lexer.dart';
 
 void main() {
   
-  String filename = 'test.js';
+  String filename = 'testcases/own/keywords.js';
   
   new File(filename).readAsString().then((String text) {
     Lexer lexer = new Lexer(text);

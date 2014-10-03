@@ -476,7 +476,7 @@ class Lexer {
           return scanComplexName(x);
           
         default:
-          if (isNameStart(x)) /// XXX: Just assume anything else is a name? Can't be a digit this is like namePart
+          if (isNameStart(x))
             return scanName(x);
           if (isWhitespace(x)) {
             ++index;
@@ -615,6 +615,7 @@ class Lexer {
       }
     }
     ++index; // skip ending quote
+    // XXX: don't build two separate strings if there were no escape sequences
     String value = new String.fromCharCodes(buffer);
     String raw = new String.fromCharCodes(input.getRange(tokenStart, index));
     return emitToken(Token.STRING, value)..raw = raw;

@@ -77,6 +77,26 @@ class Parser {
     return next();
   }
   
+  void consumeName(String name) {
+    if (token.type != Token.NAME || token.value != name) {
+      fail(expected: name);
+    }
+    next();
+  }
+  
+  bool peekName(String name) {
+    return token.type == Token.NAME && token.value == name;
+  }
+  
+  bool tryName(String name) {
+    if (token.type == Token.NAME && token.value == name) {
+      next();
+      return true;
+    } else {
+      return false;
+    }
+  }
+  
   Name parseName() {
     Token token = requireNext(Token.NAME);
     return new Name(token.value);
@@ -215,7 +235,7 @@ class Parser {
       Expression value = new FunctionExpression(null, params, body);
       return new Property(name, value, kind); // (internalize the get/set strings)
     }
-    return fail(expected: 'property');
+    return fail(expected: 'property', tok : nameTok);
   }
   
   Expression parseObjectLiteral() {
@@ -225,6 +245,7 @@ class Parser {
       if (properties.length > 0) {
         consume(Token.COMMA);
       }
+      if (token.type == Token.RBRACE) break; // may end with extra comma
       properties.add(parseProperty());
     }
     consume(Token.RBRACE);
@@ -285,14 +306,14 @@ class Parser {
   Expression parseNewExpression() {
     assert(token.value == 'new');
     Token newTok = next();
-    if (token.value == 'new')  {
+    if (peekName('new'))  {
       return new NewExpression(parseNewExpression(), <Expression>[]);
     }
     return parseMemberExpression(newTok);
   }
   
   Expression parseLeftHandSide() {
-    if (token.value == 'new') {
+    if (peekName('new')) {
       return parseNewExpression();
     } else {
       return parseMemberExpression(null);
@@ -375,26 +396,6 @@ class Parser {
   }
   
   ////// STATEMENTS /////
-  
-  void consumeName(String name) {
-    if (token.type != Token.NAME || token.value != name) {
-      fail(expected: name);
-    }
-    next();
-  }
-  
-  bool peekName(String name) {
-    return token.type == Token.NAME && token.value == name;
-  }
-  
-  bool tryName(String name) {
-    if (token.type == Token.NAME && token.value == name) {
-      next();
-      return true;
-    } else {
-      return false;
-    }
-  }
   
   BlockStatement parseBlock() {
     consume(Token.LBRACE);
@@ -485,7 +486,7 @@ class Parser {
     consume(Token.NAME);
     consume(Token.LPAREN);
     Node exp1;
-    if (token.type == Token.NAME && token.value == 'var') {
+    if (peekName('var')) {
       exp1 = parseVariableDeclarationList(allowIn: false);
     } else if (token.type != Token.SEMICOLON) {
       exp1 = parseExpression(allowIn: false);
