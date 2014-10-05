@@ -4,12 +4,18 @@ import 'lexer.dart';
 import 'ast.dart';
 
 class ParseError {
-  String msg;
-  int position;
+  String message;
+  /// 0-based line index. Use [lineNumber] for convenient 1-based line number.
+  int lineIndex;
+  int startOffset;
+  int endOffset;
   
-  ParseError(this.msg, this.position);
+  ParseError(this.message, this.lineIndex, this.startOffset, this.endOffset);
   
-  String toString() => msg;
+  /// 1-based line index. More convenient for printing out warnings.
+  int get lineNumber => 1 + lineIndex;
+  
+  String toString() => message;
 }
 
 class Parser {
@@ -40,7 +46,7 @@ class Parser {
       else
         message = "Unexpected token $tok";
     }
-    throw new ParseError(message, tok.startOffset);
+    throw new ParseError(message, tok.line, tok.startOffset, tok.endOffset);
   }
   
   /// Returns the current token, and scans the next one. 

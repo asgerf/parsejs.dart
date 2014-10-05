@@ -3,8 +3,8 @@
 import '../bin/ast.dart';
 import '../bin/parser.dart';
 import '../bin/lexer.dart';
-import '../bin/ast_json.dart';
-import '../bin/line_numbers.dart';
+import 'ast_json.dart';
+import '../../scrap/bin/line_numbers.dart';
 
 import 'dart:io';
 import 'dart:convert' show JSON;
@@ -53,9 +53,7 @@ void main(List<String> cmdargs) {
       }
       
     } on ParseError catch (e) {
-      LineNumbers lines = new LineNumbers(text);
-      int line = 1 + lines.getLineAt(e.position);
-      stderr.writeln('${file.path}:$line ${e.msg}');
+      stderr.writeln('${file.path}:${e.lineNumber} ${e.message}');
       exit(1);
     }
   });
