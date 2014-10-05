@@ -11,10 +11,11 @@ abstract class Node {
   /// Source-code offsets.
   int start, end;
 
-  /// Line number corresponding to [start] offset.
-  /// Technically redundant information given that [start] is here, but [line] is
-  /// useful for debugging and quick printouts, so it is included in Node.
-  int line;
+  /// 0-based line number. 
+  int lineIndex;
+  
+  /// 1-based line number.
+  int get lineNumber => 1 + lineIndex;
 
   /// Retrieves the filename from the enclosing [Program]. Returns null if the node is orphaned.
   String get filename {
@@ -24,7 +25,7 @@ abstract class Node {
   }
   
   /// A string with filename and line number.
-  String get location => "$filename:$line";
+  String get location => "$filename:$lineNumber";
   
   /// Returns the [Program] node enclosing this node, possibly the node itself, or null if not enclosed in any program.
   Program get enclosingProgram {
@@ -50,6 +51,7 @@ abstract class Node {
   /// Visits the immediate children of this node.
   void forEach(callback(Node node));
   
+  /// Calls the relevant `visit` method on the visitor.
   dynamic visitBy(Visitor visitor);
 }
 

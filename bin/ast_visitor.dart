@@ -1,8 +1,7 @@
 part of ast;
 
-
+/// Visitor interface for AST nodes. See [BaseVisitor] and [RecursiveVisitor].
 abstract class Visitor<T> {
-  
   T visit(Node node) => node.visitBy(this);
   
   T visitProgram(Program node);
@@ -49,69 +48,78 @@ abstract class Visitor<T> {
   T visitNameExpression(NameExpression node);
   T visitLiteral(LiteralExpression node);
   T visitRegexp(RegexpExpression node);
-  
 }
 
+/// Implementation of [Visitor] which redirects each `visit` method to a method [defaultNode].
+/// 
+/// This is convenient when only a couple of `visit` methods are needed 
+/// and a default action can be taken for all other nodes.
 class BaseVisitor<T> implements Visitor<T> {
-  
   T defaultNode(Node node) => null;
-  T defaultStatement(Statement node) => null;
-  T defaultExpression(Expression node) => null;
   
   T visit(Node node) => node.visitBy(this);
   
   T visitProgram(Program node) => defaultNode(node);
   T visitName(Name node) => defaultNode(node);
   
-  T visitEmptyStatement(EmptyStatement node) => defaultStatement(node);
-  T visitBlock(BlockStatement node) => defaultStatement(node);
-  T visitExpressionStatement(ExpressionStatement node) => defaultStatement(node);
-  T visitIf(IfStatement node) => defaultStatement(node);
-  T visitLabeledStatement(LabeledStatement node) => defaultStatement(node);
-  T visitBreak(BreakStatement node) => defaultStatement(node);
-  T visitContinue(ContinueStatement node) => defaultStatement(node);
-  T visitWith(WithStatement node) => defaultStatement(node);
-  T visitSwitch(SwitchStatement node) => defaultStatement(node);
+  T visitEmptyStatement(EmptyStatement node) => defaultNode(node);
+  T visitBlock(BlockStatement node) => defaultNode(node);
+  T visitExpressionStatement(ExpressionStatement node) => defaultNode(node);
+  T visitIf(IfStatement node) => defaultNode(node);
+  T visitLabeledStatement(LabeledStatement node) => defaultNode(node);
+  T visitBreak(BreakStatement node) => defaultNode(node);
+  T visitContinue(ContinueStatement node) => defaultNode(node);
+  T visitWith(WithStatement node) => defaultNode(node);
+  T visitSwitch(SwitchStatement node) => defaultNode(node);
   T visitSwitchCase(SwitchCase node) => defaultNode(node);
-  T visitReturn(ReturnStatement node) => defaultStatement(node);
-  T visitThrow(ThrowStatement node) => defaultStatement(node);
-  T visitTry(TryStatement node) => defaultStatement(node);
+  T visitReturn(ReturnStatement node) => defaultNode(node);
+  T visitThrow(ThrowStatement node) => defaultNode(node);
+  T visitTry(TryStatement node) => defaultNode(node);
   T visitCatch(CatchClause node) => defaultNode(node);
-  T visitWhile(WhileStatement node) => defaultStatement(node);
-  T visitDoWhile(DoWhileStatement node) => defaultStatement(node);
-  T visitFor(ForStatement node) => defaultStatement(node);
-  T visitForIn(ForInStatement node) => defaultStatement(node);
-  T visitFunctionDeclaration(FunctionDeclaration node) => defaultStatement(node);
-  T visitVariableDeclaration(VariableDeclaration node) => defaultStatement(node);
+  T visitWhile(WhileStatement node) => defaultNode(node);
+  T visitDoWhile(DoWhileStatement node) => defaultNode(node);
+  T visitFor(ForStatement node) => defaultNode(node);
+  T visitForIn(ForInStatement node) => defaultNode(node);
+  T visitFunctionDeclaration(FunctionDeclaration node) => defaultNode(node);
+  T visitVariableDeclaration(VariableDeclaration node) => defaultNode(node);
   T visitVariableDeclarator(VariableDeclarator node) => defaultNode(node);
-  T visitDebugger(DebuggerStatement node) => defaultStatement(node);
+  T visitDebugger(DebuggerStatement node) => defaultNode(node);
   
-  T visitThis(ThisExpression node) => defaultExpression(node);
-  T visitArray(ArrayExpression node) => defaultExpression(node);
-  T visitObject(ObjectExpression node) => defaultExpression(node);
+  T visitThis(ThisExpression node) => defaultNode(node);
+  T visitArray(ArrayExpression node) => defaultNode(node);
+  T visitObject(ObjectExpression node) => defaultNode(node);
   T visitProperty(Property node) => defaultNode(node);
-  T visitFunctionExpression(FunctionExpression node) => defaultExpression(node);
-  T visitSequence(SequenceExpression node) => defaultExpression(node);
-  T visitUnary(UnaryExpression node) => defaultExpression(node);
-  T visitBinary(BinaryExpression node) => defaultExpression(node);
-  T visitAssignment(AssignmentExpression node) => defaultExpression(node);
-  T visitUpdateExpression(UpdateExpression node) => defaultExpression(node);
-  T visitConditional(ConditionalExpression node) => defaultExpression(node);
-  T visitNew(NewExpression node) => defaultExpression(node);
-  T visitCall(CallExpression node) => defaultExpression(node);
-  T visitMember(MemberExpression node) => defaultExpression(node);
-  T visitIndex(IndexExpression node) => defaultExpression(node);
-  T visitNameExpression(NameExpression node) => defaultExpression(node);
-  T visitLiteral(LiteralExpression node) => defaultExpression(node);
-  T visitRegexp(RegexpExpression node) => defaultExpression(node);
-  
+  T visitFunctionExpression(FunctionExpression node) => defaultNode(node);
+  T visitSequence(SequenceExpression node) => defaultNode(node);
+  T visitUnary(UnaryExpression node) => defaultNode(node);
+  T visitBinary(BinaryExpression node) => defaultNode(node);
+  T visitAssignment(AssignmentExpression node) => defaultNode(node);
+  T visitUpdateExpression(UpdateExpression node) => defaultNode(node);
+  T visitConditional(ConditionalExpression node) => defaultNode(node);
+  T visitNew(NewExpression node) => defaultNode(node);
+  T visitCall(CallExpression node) => defaultNode(node);
+  T visitMember(MemberExpression node) => defaultNode(node);
+  T visitIndex(IndexExpression node) => defaultNode(node);
+  T visitNameExpression(NameExpression node) => defaultNode(node);
+  T visitLiteral(LiteralExpression node) => defaultNode(node);
+  T visitRegexp(RegexpExpression node) => defaultNode(node);
 }
 
+/// Traverses the entire subtree when visiting a node.
+/// 
+/// When overriding a `visitXXX` method, it is your responsibility to visit
+/// the children of the given node, otherwise that subtree will not be traversed.
+///  
+/// For example:
+///     visitWhile(While node) {
+///         print('Found while loop on line ${node.line}');
+///         node.forEach(visit); // visit children
+///     }
+/// Without the call to `forEach`, a while loop nested in another while loop would 
+/// not be found.
 class RecursiveVisitor extends BaseVisitor {
-  // TODO: implement this properly
-  visit(Node node) {
-    node.visitBy(this);
+  defaultNode(Node node) {
     node.forEach(visit);
   }
-  
 }
+

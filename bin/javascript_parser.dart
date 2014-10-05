@@ -7,7 +7,7 @@ import 'lexer.dart';
 import 'parser.dart';
 
 export 'ast.dart';
-export 'parser.dart' show ParseError;
+export 'lexer.dart' show ParseError;
 
 Program parse(String text) => new Parser(new Lexer(text)).parseProgram();
 

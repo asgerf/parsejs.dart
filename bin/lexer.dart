@@ -3,6 +3,21 @@ library lexer;
 import 'charcode.dart' as char;
 import 'package:unicode/unicode.dart' as unicode;
 
+class ParseError {
+  String message;
+  /// 0-based line index. Use [lineNumber] for convenient 1-based line number.
+  int lineIndex;
+  int startOffset;
+  int endOffset;
+  
+  ParseError(this.message, this.lineIndex, this.startOffset, this.endOffset);
+  
+  /// 1-based line index. More convenient for printing out warnings.
+  int get lineNumber => 1 + lineIndex;
+  
+  String toString() => message;
+}
+
 class Token {
   int startOffset;
   int line;
@@ -138,6 +153,10 @@ class Lexer {
   int currentLine = 0;
   bool seenLinebreak;
   
+  dynamic fail(String message) {
+    throw new ParseError(message, currentLine, tokenStart, index);
+  }
+  
   Token emitToken(int type, [String value]) {
     return new Token(tokenStart, tokenLine, type, seenLinebreak, value);
   }
@@ -212,7 +231,7 @@ class Lexer {
       if (x == char.BACKSLASH) {
         x = input[++index];
         if (x != char.$u) {
-          throw "Invalid escape sequence in name";
+          return fail("Invalid escape sequence in name");
         }
         ++index;
         buffer.add(scanHexSequence(4));
@@ -245,7 +264,7 @@ class Lexer {
         value = (value << 4) + (x - char.$A + 10);
       }
       else {
-        throw "Invalid hex sequence"; // TODO: error management
+        return fail('Invalid hex sequence');
       }
       x = input[++index];
     }
@@ -306,7 +325,7 @@ class Lexer {
                   }
                   break;
                 case char.NULL:
-                  throw "Unterminated block comment"; // TODO: error management
+                  return fail("Unterminated block comment");
                 case char.CR:
                   ++currentLine;
                   x = input[++index];
@@ -508,13 +527,10 @@ class Lexer {
             ++index;
             continue;
           }
-          throw "Unrecognized character: $x";
+          return fail("Unrecognized character: '${new String.fromCharCode(x)}' (UTF+${x.toRadixString(16)})");
       }
     }
   }
-  
-  /// For debugging, returns the string value of the current token range (trimmed to 100 to avoid mega outputs)
-  String get currentTokenString => new String.fromCharCodes(input.getRange(tokenStart, index)).substring(0, 100);
   
   /// Scan a regular expression literal, where the opening token has already been scanned
   /// This is called directly from the parser.
@@ -525,7 +541,7 @@ class Lexer {
     while (inCharClass || x != char.SLASH) {
       switch (x) {
         case char.NULL:
-          throw "Unterminated regexp: $currentTokenString"; // TODO: error management
+          return fail("Unterminated regexp");
         case char.LBRACKET:
           inCharClass = true;
           break;
@@ -534,13 +550,13 @@ class Lexer {
           break;
         case char.BACKSLASH:
           x = input[++index];
-          if (isEOL(x)) throw "Unterminated regexp: $currentTokenString"; // TODO: error management
+          if (isEOL(x)) return fail("Unterminated regexp");
           break;
         case char.CR:
         case char.LF:
         case char.LS:
         case char.PS:
-          throw "Unterminated regexp: $currentTokenString"; // TODO: error management
+          return fail("Unterminated regexp");
       }
       x = input[++index];
     }
@@ -640,7 +656,7 @@ class Lexer {
             break;
         }
       } else if (isEOL(x)) { // Note: EOF counts as an EOL
-        throw "Unterminated string literal";
+        return fail("Unterminated string literal");
       } else {
         buffer.add(x); // ordinary char
         x = input[++index]; 
