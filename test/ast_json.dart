@@ -6,17 +6,26 @@ import '../lib/src/ast.dart';
 /// This is for testing purposes, so the output can be compared against another well-tested parser.
 class Ast2Json extends Visitor {
   
+  bool ranges;
+  bool lines;
+  
+  Ast2Json({this.ranges: false, this.lines: false});
+  
   // NOTE: The order in which properties are mentioned is significant, since properties
   //       must be mentioned in the same order for our JSON comparator to work.
   
   list(List<Node> nodes) => nodes.map(visit).toList();
   
   
-  
   visit(Node node) {
     if (node == null) return null;
     Map json = node.visitBy(this);
-//    json['range'] = [node.start, node.end];
+    if (ranges) {
+      json['range'] = [node.start, node.end];
+    }
+    if (lines) {
+      json['line'] = node.line;
+    }
     return json;
   }
   

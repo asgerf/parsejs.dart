@@ -139,7 +139,7 @@ bool isEOL(x) {
 
 class Lexer {
   
-  Lexer(String text, {this.filename, this.currentLine : 1}) {
+  Lexer(String text, {this.filename, this.currentLine : 1, this.index : 0}) {
     // TODO: can we do with without cloning?
     input = new List<int>.from(text.codeUnits);
     input.add(char.NULL);

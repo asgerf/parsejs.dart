@@ -18,7 +18,7 @@ for file in $FILES
 do
 	name=$(basename $file)
 	name=${name%.js}
-	T=$(dart test_parser.dart --time $file)
+	T=$(dart parser.dart --time $file)
 	printf "%-30s %4d\n" $name $T
 	TOTAL=$((TOTAL+T))
 done	
