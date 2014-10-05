@@ -1,5 +1,5 @@
 import 'dart:io';
-import '../bin/lexer.dart';
+import '../lib/src/lexer.dart';
 
 void main() {
   
