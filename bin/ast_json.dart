@@ -11,7 +11,14 @@ class Ast2Json extends Visitor {
   
   list(List<Node> nodes) => nodes.map(visit).toList();
   
-  visit(Node node) => node == null ? null : node.visitBy(this);
+  
+  
+  visit(Node node) {
+    if (node == null) return null;
+    Map json = node.visitBy(this);
+//    json['range'] = [node.start, node.end];
+    return json;
+  }
   
   visitProgram(Program node) => {
     'type': 'Program',

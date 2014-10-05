@@ -1,42 +1,62 @@
-import 'dart:io';
-import '../bin/lexer.dart';
-import '../bin/parser.dart';
+// Parses the given FILE and prints it as JSON so it can be compared against Esprima's output. 
+
 import '../bin/ast.dart';
+import '../bin/parser.dart';
+import '../bin/lexer.dart';
+import '../bin/ast_json.dart';
 import '../bin/line_numbers.dart';
 
+import 'dart:io';
+import 'dart:convert' show JSON;
 
-void printAST(Node node) {
-  int level = 0;
-  void visit(Node node) {
-    String indent = ''.padLeft(level * 2);
-    print('$indent$node');
-    level++;
-    node.forEach(visit);
-    level--;
-  }
-  visit(node);
+class Args {
+  List<String> args = <String>[];
+  Set<String> flags = new Set<String>();
+  
+  bool operator[](String flag) => flags.contains(flag);
 }
 
-void main() {
-
-  String filename = '../benchmarks/deltablue.js';
-  
-  new File(filename).readAsString().then((String text) {
-    Lexer lexer = new Lexer(text);
-    Parser parser = new Parser(lexer);
-    
-    LineNumbers lines = new LineNumbers(text);
-    
-    try {
-      Program program = parser.parseProgram();
-      printAST(program);
-      print('OK');
-    } on ParseError catch (e) {
-      int line = 1 + lines.getLineAt(e.position);
-      print("$filename:$line ${e.msg}");
-      rethrow;
+Args parseArgs(List<String> args) {
+  Args result = new Args();
+  for (String arg in args) {
+    if (arg.startsWith('--')) {
+      result.flags.add(arg.substring(2));
+    } else {
+      result.args.add(arg);
     }
-    
-  });
+  }
+  return result;
+}
+
+void main(List<String> cmdargs) {
+  Args cmd = parseArgs(cmdargs);
   
+  if (cmd.args.length != 1) {
+    print("Usage: test_parser.dart [--json] [--time] FILE.js");
+    exit(1);
+  }
+  
+  File file = new File(cmd.args[0]);
+  file.readAsString().then((String text) {
+    try {
+      Stopwatch watch = new Stopwatch()..start();
+      Program ast = new Parser(new Lexer(text)).parseProgram();
+      int time = watch.elapsedMilliseconds;
+      
+      if (cmd['time']) {
+        print(time);
+      }
+      
+      if (cmd['json']) {
+        var json = new Ast2Json().visit(ast);
+        print(JSON.encode(json));
+      }
+      
+    } on ParseError catch (e) {
+      LineNumbers lines = new LineNumbers(text);
+      int line = 1 + lines.getLineAt(e.position);
+      stderr.writeln('${file.path}:$line ${e.msg}');
+      exit(1);
+    }
+  });
 }

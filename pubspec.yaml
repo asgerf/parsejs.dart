@@ -1,4 +1,5 @@
 name: javascript_parser
 description: A sample command-line application
 dependencies:
+  args: any
   unicode: any

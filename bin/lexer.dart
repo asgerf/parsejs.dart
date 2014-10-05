@@ -5,17 +5,18 @@ import 'package:unicode/unicode.dart' as unicode;
 
 class Token {
   int startOffset;
+  int line;
   int type;
-  String text; // text exactly as in source code
+  String text; // text exactly as in source code or null for EOF or tokens with type > 31
   bool afterLinebreak; // true if first token after a linebreak
-  String value; // value of string literal, null for other tokens
+  String value; // value of identifier or string literal after escapes, null for other tokens
   
   /// For tokens that can be used as binary operators, this indicates their relative precedence.
   /// Set to -100 for other tokens.
   /// Token type can be BINARY, or UNARY (+,-) or NAME (instanceof,in).
   int binaryPrecedence = -100;
   
-  Token(this.startOffset, this.type, this.afterLinebreak, this.text);
+  Token(this.startOffset, this.line, this.type, this.afterLinebreak, this.text); 
   
   String toString() => text != null ? text : typeToString(type);
   
@@ -33,7 +34,7 @@ class Token {
   static const int STRING = 7;
   static const int REGEXP = 8;
   
-  // Tokens without a value have type equal to their corresponding char code
+  // Tokens without a text have type equal to their corresponding char code
   // All these are >31
   static const int LPAREN = char.LPAREN;
   static const int RPAREN = char.RPAREN;
@@ -49,7 +50,7 @@ class Token {
   
   static String typeToString(int type) {
     if (type > 31)
-      return new String.fromCharCode(type);
+      return "'${new String.fromCharCode(type)}'";
     switch (type) {
       case EOF: return 'EOF';
       case NAME: return 'name';
@@ -90,27 +91,37 @@ bool isNameStart(x) => isLetter(x) || x == char.DOLLAR || x == char.UNDERSCORE;
 
 bool isNamePart(x) => char.$a <= x && x <= char.$z || char.$A <= x && x <= char.$Z || char.$0 <= x && x <= char.$9 ||
                       x == char.DOLLAR || x == char.UNDERSCORE ||
-                      x >= 127 && (isFancyLetter(x) || unicode.isDecimalNumber(x) || isFancyNamePart(x));
+                      x > 127 && (isFancyLetter(x) || unicode.isDecimalNumber(x) || isFancyNamePart(x));
 
 bool isFancyNamePart(x) => x == char.ZWNJ || x == char.ZWJ || x == char.BOM || unicode.isNonspacingMark(x); // TODO: Combining Spacing Mark (Mc) is missing from unicode.
 
-/// Includes ordinary whitespace (not line terminators)
+/// Ordinary whitespace (not line terminators)
 bool isWhitespace(x) {
   switch (x) {
     case char.SPACE:
     case char.TAB:
     case char.VTAB:
     case char.FF:
-    case char.NBSP:
     case char.BOM:
       return true;
       
     default:
-      return x > 0x100 && unicode.isSpaceSeparator(x);
+      return x > 127 && unicode.isSpaceSeparator(x);
   }
 }
 
-bool isEOL(x) => x == char.LF || x == char.CR || x == char.LS || x == char.PS || x == char.NULL;
+bool isEOL(x) {
+  switch (x) {
+    case char.LF:
+    case char.CR:
+    case char.LS:
+    case char.PS:
+    case char.NULL:
+      return true;
+    default:
+      return false;
+  }
+}
 
 class Lexer {
   
@@ -123,23 +134,16 @@ class Lexer {
   List<int> input;
   int index = 0;
   int tokenStart;
+  int tokenLine;
+  int currentLine = 0;
   bool seenLinebreak;
   
   Token emitToken(int type, [String value]) {
-    return new Token(tokenStart, type, seenLinebreak, value);
+    return new Token(tokenStart, tokenLine, type, seenLinebreak, value);
   }
   Token emitValueToken(int type) {
     String value = new String.fromCharCodes(input.getRange(tokenStart, index));
-    return new Token(tokenStart, type, seenLinebreak, value);
-  }
-  
-  /// Annotates a NAME token with precedence information before returning it.
-  /// This is so 'instanceof' and 'in' can be used as both names and binary operators.
-  Token addNamePrecedence(Token token) {
-    if (token.text == 'instanceof' || token.text == 'in') {
-      token.binaryPrecedence = Precedence.RELATIONAL;
-    }
-    return token;
+    return new Token(tokenStart, tokenLine, type, seenLinebreak, value);
   }
   
   Token scanNumber(int x) {
@@ -193,8 +197,11 @@ class Lexer {
     while (true) {
       if (x == char.BACKSLASH)
         return scanComplexName(x);
-      if (!isNamePart(x))
-        return addNamePrecedence(emitValueToken(Token.NAME));
+      if (!isNamePart(x)) {
+        Token tok = emitValueToken(Token.NAME);
+        tok.value = tok.text;
+        return tok..binaryPrecedence = Precedence.RELATIONAL;
+      }
       x = input[++index];
     }
   }
@@ -217,7 +224,9 @@ class Lexer {
         break;
       }
     }
-    return addNamePrecedence(emitToken(Token.NAME, new String.fromCharCodes(buffer)));
+    Token tok = emitValueToken(Token.NAME);
+    tok.value = new String.fromCharCodes(buffer);
+    return tok..binaryPrecedence = Precedence.RELATIONAL;
   }
   
   /// [index] must point to the first hex digit.
@@ -249,35 +258,31 @@ class Lexer {
     while (true) { 
       int x = input[index];
       tokenStart = index;
+      tokenLine = currentLine;
       switch (x) {
         case char.NULL:
           return emitToken(Token.EOF); // (will produce infinite EOF tokens if pressed for more tokens)
-        
-        case char.$0:
-        case char.$1:
-        case char.$2:
-        case char.$3:
-        case char.$4:
-        case char.$5:
-        case char.$6:
-        case char.$7:
-        case char.$8:
-        case char.$9:
-          return scanNumber(x);
           
         case char.SPACE: // Note: Exotic whitespace symbols are handled in the default clause.
         case char.TAB:
           ++index;
-          while (isWhitespace(input[index])) ++index; // optimization
           continue;
 
         case char.CR:
+          seenLinebreak = true;
+          ++currentLine;
+          x = input[++index];
+          if (x == char.LF) {
+            ++index; // count as single linebreak
+          }
+          continue;
+          
         case char.LF:
         case char.LS:
         case char.PS:
-          ++index;
           seenLinebreak = true;
-          while (isWhitespace(input[index])) ++index; // optimization
+          ++currentLine;
+          ++index;
           continue;
           
         case char.SLASH:
@@ -287,19 +292,36 @@ class Lexer {
             while (!isEOL(x)) {
               x = input[++index];
             }
-            seenLinebreak = true;
-            continue;
+            continue; // line number will be when reading the LF,CR,LS,PS or EOF
           }
           if (x == char.STAR) { // "/*" comment
-            ++index;
-            int len = input.length;
+            x = input[index];
             while (true) {
-              while (index < len && input[index] != char.STAR) ++index;
-              if (index == len) throw "Unterminated block comment"; // TODO: error management
-              ++index; // consume star
-              if (input[index] == char.SLASH) {
-                ++index;
-                continue scanLoop; // Finished. Ignore token scan again.
+              switch (x) {
+                case char.STAR:
+                  x = input[++index];
+                  if (x == char.SLASH) {
+                    ++index; // skip final slash
+                    continue scanLoop; // Finished block comment.
+                  }
+                  break;
+                case char.NULL:
+                  throw "Unterminated block comment"; // TODO: error management
+                case char.CR:
+                  ++currentLine;
+                  x = input[++index];
+                  if (x == char.LF) {
+                    x = input[++index]; // count as one line break
+                  }
+                  break;
+                case char.LS:
+                case char.LF:
+                case char.PS:
+                  ++currentLine;
+                  x = input[++index];
+                  break;
+                default:
+                  x = input[++index];
               }
             }
           }
@@ -480,9 +502,10 @@ class Lexer {
         default:
           if (isNameStart(x))
             return scanName(x);
+          if (isDigit(x)) 
+            return scanNumber(x);
           if (isWhitespace(x)) {
             ++index;
-            while (isWhitespace(input[index])) ++index;
             continue;
           }
           throw "Unrecognized character: $x";
@@ -513,6 +536,11 @@ class Lexer {
           x = input[++index];
           if (isEOL(x)) throw "Unterminated regexp: $currentTokenString"; // TODO: error management
           break;
+        case char.CR:
+        case char.LF:
+        case char.LS:
+        case char.PS:
+          throw "Unterminated regexp: $currentTokenString"; // TODO: error management
       }
       x = input[++index];
     }
@@ -591,10 +619,12 @@ class Lexer {
           case char.LF:
           case char.LS:
           case char.PS:
+            ++currentLine;
             x = input[++index]; // just continue on next line
             break; 
             
           case char.CR:
+            ++currentLine;
             x = input[++index];
             if (x == char.LF) {
               x = input[++index]; // Escape entire CR-LF sequence
@@ -617,7 +647,6 @@ class Lexer {
       }
     }
     ++index; // skip ending quote
-    // XXX: don't build two separate strings if there were no escape sequences
     String value = new String.fromCharCodes(buffer);
     return emitValueToken(Token.STRING)..value = value;
   }
