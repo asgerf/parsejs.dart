@@ -1,10 +1,7 @@
 // Parses the given FILE and prints it as JSON so it can be compared against Esprima's output. 
 
-import '../bin/ast.dart';
-import '../bin/parser.dart';
-import '../bin/lexer.dart';
+import '../lib/javascript_parser.dart';
 import 'ast_json.dart';
-import '../../scrap/bin/line_numbers.dart';
 
 import 'dart:io';
 import 'dart:convert' show JSON;
@@ -40,7 +37,7 @@ void main(List<String> cmdargs) {
   file.readAsString().then((String text) {
     try {
       Stopwatch watch = new Stopwatch()..start();
-      Program ast = new Parser(new Lexer(text)).parseProgram();
+      Program ast = parse(text, filename: file.path);
       int time = watch.elapsedMilliseconds;
       
       if (cmd['time']) {
@@ -53,7 +50,7 @@ void main(List<String> cmdargs) {
       }
       
     } on ParseError catch (e) {
-      stderr.writeln('${file.path}:${e.lineNumber} ${e.message}');
+      stderr.writeln(e);
       exit(1);
     }
   });

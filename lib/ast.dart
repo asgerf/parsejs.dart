@@ -11,12 +11,9 @@ abstract class Node {
   /// Source-code offsets.
   int start, end;
 
-  /// 0-based line number. 
-  int lineIndex;
+  /// 1-based line number. 
+  int line;
   
-  /// 1-based line number.
-  int get lineNumber => 1 + lineIndex;
-
   /// Retrieves the filename from the enclosing [Program]. Returns null if the node is orphaned.
   String get filename {
     Program program = enclosingProgram;
@@ -25,7 +22,7 @@ abstract class Node {
   }
   
   /// A string with filename and line number.
-  String get location => "$filename:$lineNumber";
+  String get location => "$filename:$line";
   
   /// Returns the [Program] node enclosing this node, possibly the node itself, or null if not enclosed in any program.
   Program get enclosingProgram {

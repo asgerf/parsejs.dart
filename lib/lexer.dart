@@ -5,17 +5,16 @@ import 'package:unicode/unicode.dart' as unicode;
 
 class ParseError {
   String message;
-  /// 0-based line index. Use [lineNumber] for convenient 1-based line number.
-  int lineIndex;
+  String filename;
+  int line; // 1-based line number.
   int startOffset;
   int endOffset;
   
-  ParseError(this.message, this.lineIndex, this.startOffset, this.endOffset);
+  ParseError(this.message, this.filename, this.line, this.startOffset, this.endOffset);
   
-  /// 1-based line index. More convenient for printing out warnings.
-  int get lineNumber => 1 + lineIndex;
+  String get location => filename == null ? 'Line $line' : '$filename:$line';
   
-  String toString() => message;
+  String toString() => '[$location] $message';
 }
 
 class Token {
@@ -140,7 +139,7 @@ bool isEOL(x) {
 
 class Lexer {
   
-  Lexer(String text) {
+  Lexer(String text, {this.filename, this.currentLine : 1}) {
     // TODO: can we do with without cloning?
     input = new List<int>.from(text.codeUnits);
     input.add(char.NULL);
@@ -150,11 +149,12 @@ class Lexer {
   int index = 0;
   int tokenStart;
   int tokenLine;
-  int currentLine = 0;
+  int currentLine; // We use 1-based line numbers.
   bool seenLinebreak;
+  String filename;
   
   dynamic fail(String message) {
-    throw new ParseError(message, currentLine, tokenStart, index);
+    throw new ParseError(message, filename, currentLine, tokenStart, index);
   }
   
   Token emitToken(int type, [String value]) {
