@@ -424,7 +424,13 @@ class ArrayExpression extends Expression {
 
   ArrayExpression(this.expressions);
 
-  forEach(callback) => expressions.forEach(callback);
+  forEach(callback) {
+    for (Expression exp in expressions) {
+      if (exp != null) {
+        callback(exp);
+      }
+    }
+  }
   
   String toString() => 'ArrayExpression';
   

@@ -140,9 +140,7 @@ bool isEOL(x) {
 class Lexer {
   
   Lexer(String text, {this.filename, this.currentLine : 1, this.index : 0}) {
-    // TODO: can we do with without cloning?
-    input = new List<int>.from(text.codeUnits);
-    input.add(char.NULL);
+    input = text.codeUnits;
   }
   
   List<int> input;
@@ -152,6 +150,13 @@ class Lexer {
   int currentLine; // We use 1-based line numbers.
   bool seenLinebreak;
   String filename;
+  
+  int get current => index == input.length ? char.NULL : input[index];
+  
+  int next() {
+    ++index;
+    return index == input.length ? char.NULL : input[index];
+  }
   
   dynamic fail(String message) {
     throw new ParseError(message, filename, currentLine, tokenStart, index);
@@ -167,47 +172,45 @@ class Lexer {
   
   Token scanNumber(int x) {
     if (x == char.$0) {
-      x = input[++index];
+      x = next();
       if (x == char.$x || x == char.$X) {
-        x = input[++index];
+        x = next();
         return scanHexNumber(x);
       }
     }
     while (isDigit(x)) {
-      x = input[++index];
+      x = next();
     }
     if (x == char.DOT) {
-      x = input[++index];
+      x = next();
       return scanDecimalPart(x);
     }
     return scanExponentPart(x);
   }
   
   Token scanDecimalPart(int x) {
-    assert(input[index-1] == char.DOT); // Index should point to the character AFTER the dot
     while (isDigit(x)) {
-      x = input[++index];
+      x = next();
     }
     return scanExponentPart(x);
   }
   
   Token scanExponentPart(int x) {
     if (x == char.$e || x == char.$E) {
-      x = input[++index];
+      x = next();
       if (x == char.PLUS || x == char.MINUS) {
-        x = input[++index];        
+        x = next();        
       }
       while (isDigit(x)) {
-        x = input[++index];
+        x = next();
       }
     }
     return emitValueToken(Token.NUMBER);
   }
   
   Token scanHexNumber(int x) {
-    assert(input[index-1] == char.$x || input[index-1] == char.$X); // Index should point to the character AFTER the X
     while (isDigit(x) || char.$a <= x && x <= char.$f || char.$A <= x && x <= char.$F) {
-      x = input[++index];
+      x = next();
     }
     return emitValueToken(Token.NUMBER);
   }
@@ -221,7 +224,7 @@ class Lexer {
         tok.value = tok.text;
         return tok..binaryPrecedence = Precedence.RELATIONAL;
       }
-      x = input[++index];
+      x = next();
     }
   }
   
@@ -229,16 +232,16 @@ class Lexer {
     List<int> buffer = new List<int>.from(input.getRange(tokenStart, index));
     while (true) {
       if (x == char.BACKSLASH) {
-        x = input[++index];
+        x = next();
         if (x != char.$u) {
           return fail("Invalid escape sequence in name");
         }
         ++index;
         buffer.add(scanHexSequence(4));
-        x = input[index];
+        x = current;
       } else if (isNamePart(x)) {
         buffer.add(x);
-        x = input[++index];
+        x = next();
       } else {
         break;
       }
@@ -251,7 +254,7 @@ class Lexer {
   /// [index] must point to the first hex digit.
   /// It will be advanced to point AFTER the hex sequence (i.e. index += count).
   int scanHexSequence(int count) {
-    int x = input[index];
+    int x = current;
     int value = 0;
     for (int i=0; i<count; i++) {
       if (char.$0 <= x && x <= char.$9) {
@@ -266,7 +269,7 @@ class Lexer {
       else {
         return fail('Invalid hex sequence');
       }
-      x = input[++index];
+      x = next();
     }
     return value;
   }
@@ -275,7 +278,7 @@ class Lexer {
     seenLinebreak = false;
     scanLoop:
     while (true) { 
-      int x = input[index];
+      int x = current;
       tokenStart = index;
       tokenLine = currentLine;
       switch (x) {
@@ -290,7 +293,7 @@ class Lexer {
         case char.CR:
           seenLinebreak = true;
           ++currentLine;
-          x = input[++index];
+          x = next();
           if (x == char.LF) {
             ++index; // count as single linebreak
           }
@@ -305,20 +308,20 @@ class Lexer {
           continue;
           
         case char.SLASH:
-          x = input[++index]; // consume "/"
+          x = next(); // consume "/"
           if (x == char.SLASH) { // "//" comment
-            x = input[++index];
+            x = next();
             while (!isEOL(x)) {
-              x = input[++index];
+              x = next();
             }
             continue; // line number will be when reading the LF,CR,LS,PS or EOF
           }
           if (x == char.STAR) { // "/*" comment
-            x = input[index];
+            x = current;
             while (true) {
               switch (x) {
                 case char.STAR:
-                  x = input[++index];
+                  x = next();
                   if (x == char.SLASH) {
                     ++index; // skip final slash
                     continue scanLoop; // Finished block comment.
@@ -328,19 +331,19 @@ class Lexer {
                   return fail("Unterminated block comment");
                 case char.CR:
                   ++currentLine;
-                  x = input[++index];
+                  x = next();
                   if (x == char.LF) {
-                    x = input[++index]; // count as one line break
+                    x = next(); // count as one line break
                   }
                   break;
                 case char.LS:
                 case char.LF:
                 case char.PS:
                   ++currentLine;
-                  x = input[++index];
+                  x = next();
                   break;
                 default:
-                  x = input[++index];
+                  x = next();
               }
             }
           }
@@ -352,7 +355,7 @@ class Lexer {
           return emitToken(Token.BINARY, '/')..binaryPrecedence = Precedence.MULTIPLICATIVE;
           
         case char.PLUS:
-          x = input[++index];
+          x = next();
           if (x == char.PLUS) {
             ++index;
             return emitToken(Token.UPDATE, '++');
@@ -364,7 +367,7 @@ class Lexer {
           return emitToken(Token.UNARY, '+')..binaryPrecedence = Precedence.ADDITIVE;
         
         case char.MINUS:
-          x = input[++index];
+          x = next();
           if (x == char.MINUS) {
             ++index;
             return emitToken(Token.UPDATE, '--');
@@ -376,7 +379,7 @@ class Lexer {
           return emitToken(Token.UNARY, '-')..binaryPrecedence = Precedence.ADDITIVE;
           
         case char.STAR:
-          x = input[++index];
+          x = next();
           if (x == char.EQ) {
             ++index;
             return emitToken(Token.ASSIGN, '*=');
@@ -384,7 +387,7 @@ class Lexer {
           return emitToken(Token.BINARY, '*')..binaryPrecedence = Precedence.MULTIPLICATIVE;
           
         case char.PERCENT:
-          x = input[++index];
+          x = next();
           if (x == char.EQ) {
             ++index;
             return emitToken(Token.ASSIGN, '%=');
@@ -392,9 +395,9 @@ class Lexer {
           return emitToken(Token.BINARY, '%')..binaryPrecedence = Precedence.MULTIPLICATIVE;
           
         case char.LT:
-          x = input[++index];
+          x = next();
           if (x == char.LT) {
-            x = input[++index];
+            x = next();
             if (x == char.EQ) {
               ++index;
               return emitToken(Token.ASSIGN, '<<=');
@@ -408,11 +411,11 @@ class Lexer {
           return emitToken(Token.BINARY, '<')..binaryPrecedence = Precedence.RELATIONAL;
           
         case char.GT:
-          x = input[++index];
+          x = next();
           if (x == char.GT) {
-            x = input[++index];
+            x = next();
             if (x == char.GT) {
-              x = input[++index];
+              x = next();
               if (x == char.EQ) {
                 ++index;
                 return emitToken(Token.ASSIGN, '>>>=');
@@ -432,7 +435,7 @@ class Lexer {
           return emitToken(Token.BINARY, '>')..binaryPrecedence = Precedence.RELATIONAL;
           
         case char.HAT:
-          x = input[++index];
+          x = next();
           if (x == char.EQ) {
             ++index;
             return emitToken(Token.ASSIGN, '^=');
@@ -444,7 +447,7 @@ class Lexer {
           return emitToken(Token.UNARY, '~');
           
         case char.BAR:
-          x = input[++index];
+          x = next();
           if (x == char.BAR) {
             ++index;
             return emitToken(Token.BINARY, '||')..binaryPrecedence = Precedence.LOGICAL_OR;
@@ -456,7 +459,7 @@ class Lexer {
           return emitToken(Token.BINARY, '|')..binaryPrecedence = Precedence.BITWISE_OR;
           
         case char.AMPERSAND:
-          x = input[++index];
+          x = next();
           if (x == char.AMPERSAND) {
             ++index;
             return emitToken(Token.BINARY, '&&')..binaryPrecedence = Precedence.LOGICAL_AND;
@@ -468,9 +471,9 @@ class Lexer {
           return emitToken(Token.BINARY, '&')..binaryPrecedence = Precedence.BITWISE_AND;
           
         case char.EQ:
-          x = input[++index];
+          x = next();
           if (x == char.EQ) {
-            x = input[++index];
+            x = next();
             if (x == char.EQ) {
               ++index;
               return emitToken(Token.BINARY, '===')..binaryPrecedence = Precedence.EQUALITY;
@@ -480,9 +483,9 @@ class Lexer {
           return emitToken(Token.ASSIGN, '=');
         
         case char.BANG:
-          x = input[++index];
+          x = next();
           if (x == char.EQ) {
-            x = input[++index];
+            x = next();
             if (x == char.EQ) {
               ++index;
               return emitToken(Token.BINARY, '!==')..binaryPrecedence = Precedence.EQUALITY;
@@ -492,7 +495,7 @@ class Lexer {
           return emitToken(Token.UNARY, '!');
           
         case char.DOT:
-          x = input[++index];
+          x = next();
           if (isDigit(x)) {
             return scanDecimalPart(x);
           }
@@ -537,7 +540,7 @@ class Lexer {
   /// The opening token [slash] can be a "/" or a "/=" token
   Token scanRegexpBody(Token slash) {
     bool inCharClass = false; // If true, we are inside a bracket. A slash in here does not terminate the literal. They are not nestable.
-    int x = input[index];
+    int x = current;
     while (inCharClass || x != char.SLASH) {
       switch (x) {
         case char.NULL:
@@ -549,7 +552,7 @@ class Lexer {
           inCharClass = false;
           break;
         case char.BACKSLASH:
-          x = input[++index];
+          x = next();
           if (isEOL(x)) return fail("Unterminated regexp");
           break;
         case char.CR:
@@ -558,11 +561,11 @@ class Lexer {
         case char.PS:
           return fail("Unterminated regexp");
       }
-      x = input[++index];
+      x = next();
     }
-    x = input[++index]; // Move past the terminating "/"
+    x = next(); // Move past the terminating "/"
     while (isNamePart(x)) { // Parse flags
-      x = input[++index];
+      x = next();
     }
     return emitToken(Token.REGEXP, new String.fromCharCodes(input.getRange(slash.startOffset, index)));
   }
@@ -570,46 +573,46 @@ class Lexer {
   Token scanStringLiteral(int x) {
     List<int> buffer = <int>[]; // String value without quotes, after resolving escapes. 
     int quote = x;
-    x = input[++index];
+    x = next();
     while (x != quote) {
       if (x == char.BACKSLASH) {
-        x = input[++index];
+        x = next();
         switch (x) {
           case char.$b:
             buffer.add(char.BS);
-            x = input[++index];
+            x = next();
             break;
           case char.$f:
             buffer.add(char.FF);
-            x = input[++index];
+            x = next();
             break;
           case char.$n:
             buffer.add(char.LF);
-            x = input[++index];
+            x = next();
             break;
           case char.$r:
             buffer.add(char.CR);
-            x = input[++index];
+            x = next();
             break;
           case char.$t:
             buffer.add(char.TAB);
-            x = input[++index];
+            x = next();
             break;
           case char.$v:
             buffer.add(char.VTAB);
-            x = input[++index];
+            x = next();
             break;
             
           case char.$x:
             ++index;
             buffer.add(scanHexSequence(2));
-            x = input[index];
+            x = current;
             break;
             
           case char.$u:
             ++index;
             buffer.add(scanHexSequence(4));
-            x = input[index];
+            x = current;
             break;
             
           case char.$0:
@@ -621,13 +624,13 @@ class Lexer {
           case char.$6:
           case char.$7: // Octal escape
             int value = (x - char.$0);
-            x = input[++index];
+            x = next();
             while (isDigit(x)) {
               int nextValue = (value << 3) + (x - char.$0);
               if (nextValue > 127)
                 break;
               value = nextValue;
-              x = input[++index];
+              x = next();
             }
             buffer.add(value);
             break; // OK
@@ -636,14 +639,14 @@ class Lexer {
           case char.LS:
           case char.PS:
             ++currentLine;
-            x = input[++index]; // just continue on next line
+            x = next(); // just continue on next line
             break; 
             
           case char.CR:
             ++currentLine;
-            x = input[++index];
+            x = next();
             if (x == char.LF) {
-              x = input[++index]; // Escape entire CR-LF sequence
+              x = next(); // Escape entire CR-LF sequence
             }
             break;
 
@@ -652,14 +655,14 @@ class Lexer {
           case char.BACKSLASH:
           default:
             buffer.add(x);
-            x = input[++index];
+            x = next();
             break;
         }
       } else if (isEOL(x)) { // Note: EOF counts as an EOL
         return fail("Unterminated string literal");
       } else {
         buffer.add(x); // ordinary char
-        x = input[++index]; 
+        x = next(); 
       }
     }
     ++index; // skip ending quote

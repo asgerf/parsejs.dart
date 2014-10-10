@@ -20,8 +20,15 @@ Program parse(String text, {String filename, int firstLine : 1, bool detectHashB
       }
     }
   }
-  return new Parser(new Lexer(text, filename: filename, currentLine: firstLine, index : index)).parseProgram();
+  Program program = new Parser(new Lexer(text, filename: filename, currentLine: firstLine, index : index)).parseProgram();
+  setParentPointers(program);
+  return program;
 }
 
 Future<Program> parseFile(File file) => file.readAsString().then((String text) => parse(text, filename: file.path));
 
+
+void setParentPointers(Node node, [Node parent]) {
+  node.parent = parent;
+  node.forEach((child) => setParentPointers(child, node));
+}
