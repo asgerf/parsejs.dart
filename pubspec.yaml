@@ -1,4 +1,7 @@
-name: javascript_parser
-description: A sample command-line application
+name: jsparser
+version: 1.0.0
+author: Asger Feldthaus
+description: JavaScript parser.
+homepage: https://github.com/asgerf/jsparser
 dependencies:
   unicode: any
