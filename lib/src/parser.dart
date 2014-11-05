@@ -118,7 +118,7 @@ class Parser {
     return parseBlock();
   }
   
-  FunctionExpression parseFunctionExpression() {
+  FunctionNode parseFunction() {
     int start = token.startOffset;
     assert(token.text == 'function');
     Token funToken = next();
@@ -128,7 +128,7 @@ class Parser {
     }
     List<Name> params = parseParameters();
     BlockStatement body = parseFunctionBody();
-    return new FunctionExpression(name, params, body)..start=start..end=endOffset..line=funToken.line;
+    return new FunctionNode(name, params, body)..start=start..end=endOffset..line=funToken.line;
   }
   
   ///// EXPRESSIONS //////
@@ -151,7 +151,7 @@ class Parser {
             Token tok = next();
             return new LiteralExpression(null, 'null')..start=start..end=endOffset..line=tok.line;
           case 'function': 
-            return parseFunctionExpression();
+            return new FunctionExpression(parseFunction());
         }
         Name name = parseName();
         return new NameExpression(name)..start=start..end=endOffset..line=name.line;
@@ -240,7 +240,7 @@ class Parser {
       int lparen = token.startOffset;
       List<Name> params = parseParameters();
       BlockStatement body = parseFunctionBody();
-      Expression value = new FunctionExpression(null, params, body)..start=lparen..end=endOffset..line=name.line;
+      Node value = new FunctionNode(null, params, body)..start=lparen..end=endOffset..line=name.line;
       return new Property(name, value, kind)..start=start..end=endOffset..line=kindTok.line;
     }
     return fail(expected: 'property', tok : nameTok);
@@ -298,7 +298,7 @@ class Parser {
           List<Expression> args = parseArguments();
           if (newTok != null) {
             start = newTok.startOffset;
-            exp = new NewExpression(exp, args)..start=start..end=endOffset..line=line;
+            exp = new CallExpression.newCall(exp, args)..start=start..end=endOffset..line=line;
             newTok = null;
           } else {
             exp = new CallExpression(exp, args)..start=start..end=endOffset..line=line;
@@ -310,7 +310,7 @@ class Parser {
       }
     }
     if (newTok != null) {
-      exp = new NewExpression(exp, <Expression>[])..start=newTok.startOffset..end=endOffset..line=newTok.line;
+      exp = new CallExpression.newCall(exp, <Expression>[])..start=newTok.startOffset..end=endOffset..line=newTok.line;
     }
     return exp;
   }
@@ -320,7 +320,7 @@ class Parser {
     Token newTok = next();
     if (peekName('new'))  {
       Expression exp = parseNewExpression();
-      return new NewExpression(exp, <Expression>[])..start=newTok.startOffset..end=endOffset..line=newTok.line;
+      return new CallExpression.newCall(exp, <Expression>[])..start=newTok.startOffset..end=endOffset..line=newTok.line;
     }
     return parseMemberExpression(newTok);
   }
@@ -689,7 +689,7 @@ class Parser {
     int start = token.startOffset;
     int line = token.line;
     assert(token.text == 'function');
-    FunctionExpression func = parseFunctionExpression();
+    FunctionNode func = parseFunction();
     if (func.name == null) {
       fail(message: 'Function declaration must have a name');
     }

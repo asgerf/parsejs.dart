@@ -4,7 +4,9 @@ part of ast;
 abstract class Visitor<T> {
   T visit(Node node) => node.visitBy(this);
   
+  T visitPrograms(Programs node);
   T visitProgram(Program node);
+  T visitFunctionNode(FunctionNode node);
   T visitName(Name node);
   
   T visitEmptyStatement(EmptyStatement node);
@@ -20,7 +22,7 @@ abstract class Visitor<T> {
   T visitReturn(ReturnStatement node);
   T visitThrow(ThrowStatement node);
   T visitTry(TryStatement node);
-  T visitCatch(CatchClause node);
+  T visitCatchClause(CatchClause node);
   T visitWhile(WhileStatement node);
   T visitDoWhile(DoWhileStatement node);
   T visitFor(ForStatement node);
@@ -41,7 +43,6 @@ abstract class Visitor<T> {
   T visitAssignment(AssignmentExpression node);
   T visitUpdateExpression(UpdateExpression node);
   T visitConditional(ConditionalExpression node);
-  T visitNew(NewExpression node);
   T visitCall(CallExpression node);
   T visitMember(MemberExpression node);
   T visitIndex(IndexExpression node);
@@ -58,8 +59,10 @@ class BaseVisitor<T> implements Visitor<T> {
   T defaultNode(Node node) => null;
   
   T visit(Node node) => node.visitBy(this);
-  
+
+  T visitPrograms(Programs node) => defaultNode(node);
   T visitProgram(Program node) => defaultNode(node);
+  T visitFunctionNode(FunctionNode node) => defaultNode(node);
   T visitName(Name node) => defaultNode(node);
   
   T visitEmptyStatement(EmptyStatement node) => defaultNode(node);
@@ -75,7 +78,7 @@ class BaseVisitor<T> implements Visitor<T> {
   T visitReturn(ReturnStatement node) => defaultNode(node);
   T visitThrow(ThrowStatement node) => defaultNode(node);
   T visitTry(TryStatement node) => defaultNode(node);
-  T visitCatch(CatchClause node) => defaultNode(node);
+  T visitCatchClause(CatchClause node) => defaultNode(node);
   T visitWhile(WhileStatement node) => defaultNode(node);
   T visitDoWhile(DoWhileStatement node) => defaultNode(node);
   T visitFor(ForStatement node) => defaultNode(node);
@@ -96,7 +99,6 @@ class BaseVisitor<T> implements Visitor<T> {
   T visitAssignment(AssignmentExpression node) => defaultNode(node);
   T visitUpdateExpression(UpdateExpression node) => defaultNode(node);
   T visitConditional(ConditionalExpression node) => defaultNode(node);
-  T visitNew(NewExpression node) => defaultNode(node);
   T visitCall(CallExpression node) => defaultNode(node);
   T visitMember(MemberExpression node) => defaultNode(node);
   T visitIndex(IndexExpression node) => defaultNode(node);

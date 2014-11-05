@@ -139,23 +139,28 @@ bool isEOL(x) {
 
 class Lexer {
   
-  Lexer(String text, {this.filename, this.currentLine : 1, this.index : 0}) {
+  Lexer(String text, {this.filename, this.currentLine : 1, this.index : 0, this.endOfFile}) {
     input = text.codeUnits;
+    if (endOfFile == null) {
+      endOfFile = input.length;
+    }
   }
   
   List<int> input;
   int index = 0;
+  int endOfFile;
   int tokenStart;
   int tokenLine;
   int currentLine; // We use 1-based line numbers.
   bool seenLinebreak;
   String filename;
   
-  int get current => index == input.length ? char.NULL : input[index];
+  
+  int get current => index == endOfFile ? char.NULL : input[index];
   
   int next() {
     ++index;
-    return index == input.length ? char.NULL : input[index];
+    return index == endOfFile ? char.NULL : input[index];
   }
   
   dynamic fail(String message) {

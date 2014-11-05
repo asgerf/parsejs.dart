@@ -1,6 +1,6 @@
 // Parses the given FILE and prints it as JSON so it can be compared against Esprima's output. 
 
-import '../lib/jsparser.dart';
+import '../lib/parsejs.dart';
 import 'ast_json.dart';
 
 import 'dart:io';
@@ -37,7 +37,7 @@ void main(List<String> cmdargs) {
   file.readAsString().then((String text) {
     try {
       Stopwatch watch = new Stopwatch()..start();
-      Program ast = parse(text, filename: file.path);
+      Program ast = parsejs(text, filename: file.path);
       int time = watch.elapsedMilliseconds;
       
       if (cmd['time']) {

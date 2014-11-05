@@ -1,4 +1,4 @@
-name: jsparser
+name: parsejs
 version: 1.0.0
 author: Asger Feldthaus
 description: JavaScript parser.

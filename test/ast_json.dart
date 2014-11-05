@@ -29,6 +29,19 @@ class Ast2Json extends Visitor {
     return json;
   }
   
+  visitPrograms(Programs node) => throw 'Can only JSONify one program';
+  
+  visitFunctionNode(FunctionNode node) => {
+    'type': 'FunctionExpression',
+    'id': visit(node.name),
+    'params': list(node.params),
+    'defaults': [],
+    'body': visit(node.body),
+    'rest': null,
+    'generator': false,
+    'expression': false
+  };
+  
   visitProgram(Program node) => {
     'type': 'Program',
     'body': list(node.body)
@@ -112,7 +125,7 @@ class Ast2Json extends Visitor {
     'finalizer': visit(node.finalizer)
   };
   
-  visitCatch(CatchClause node) => {
+  visitCatchClause(CatchClause node) => {
     'type': 'CatchClause',
     'param': visit(node.param),
     'body': visit(node.body)
@@ -194,16 +207,7 @@ class Ast2Json extends Visitor {
     'kind': node.kind
   };
   
-  visitFunctionExpression(FunctionExpression node) => {
-    'type': 'FunctionExpression',
-    'id': visit(node.name),
-    'params': list(node.params),
-    'defaults': [],
-    'body': visit(node.body),
-    'rest': null,
-    'generator': false,
-    'expression': false
-  };
+  visitFunctionExpression(FunctionExpression node) => visit(node.function);
   
   visitSequence(SequenceExpression node) => {
     'type': 'SequenceExpression',
@@ -245,14 +249,8 @@ class Ast2Json extends Visitor {
     'alternate': visit(node.otherwise)
   };
   
-  visitNew(NewExpression node) => {
-    'type': 'NewExpression',
-    'callee': visit(node.callee),
-    'arguments': list(node.arguments)
-  };
-  
   visitCall(CallExpression node) => {
-    'type': 'CallExpression',
+    'type': node.isNew ? 'NewExpression' : 'CallExpression',
     'callee': visit(node.callee),
     'arguments': list(node.arguments)
   };

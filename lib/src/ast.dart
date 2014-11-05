@@ -34,12 +34,11 @@ abstract class Node {
     return null;
   }
   
-  /// Returns the [FunctionExpression] enclosing this node, possibly the node itself, or null if not enclosed in any function.
-  /// NOTE: calling this on [FunctionDeclaration] and [FunctionExpression] yields different results.
-  FunctionExpression get enclosingFunction {
+  /// Returns the [FunctionNode] enclosing this node, possibly the node itself, or null if not enclosed in any function.
+  FunctionNode get enclosingFunction {
     Node node = this;
     while (node != null) {
-      if (node is FunctionExpression) return node;
+      if (node is FunctionNode) return node;
       node = node.parent;
     }
     return null;
@@ -52,7 +51,24 @@ abstract class Node {
   dynamic visitBy(Visitor visitor);
 }
 
-class Program extends Node {
+abstract class Scope extends Node {
+  /// Variables declared in this scope, including the implicitly declared "arguments" variable.
+  Set<String> environment;
+}
+
+class Programs extends Node {
+  List<Program> programs = <Program>[];
+  
+  Programs(this.programs);
+  
+  void forEach(callback) => programs.forEach(callback);
+  
+  String toString() => 'Programs';
+  
+  visitBy(Visitor v) => v.visitPrograms(this);
+}
+
+class Program extends Scope {
   /// Indicates where the program was parsed from.
   /// In principle, this can be anything, it is just a string passed to the parser for convenience.
   String filename;
@@ -68,9 +84,48 @@ class Program extends Node {
   visitBy(Visitor v) => v.visitProgram(this);
 }
 
-/// An identifier. The class is called [Name] simply because it is shorter than "Identifier".
+class FunctionNode extends Scope {
+  Name name;
+  List<Name> params;
+  Statement body;
+  
+  FunctionNode(this.name, this.params, this.body);
+  
+  bool get isExpression => parent is FunctionExpression;
+  bool get isDeclaration => parent is FunctionDeclaration;
+
+  forEach(callback) {
+    if (name != null) callback(name);
+    params.forEach(callback);
+    callback(body);
+  }
+  
+  String toString() => 'FunctionNode';
+  
+  visitBy(Visitor v) => v.visitFunctionNode(this);
+}
+
+/// Mention of a variable, property, or label.
 class Name extends Node {
+  /// Name being referenced.
+  /// 
+  /// Unicode values have been resolved.
   String value;
+  
+  /// Link to the enclosing [FunctionExpression], [Program], or [CatchClause] where this variable is declared 
+  /// (defaults to [Program] if undeclared), or `null` if this is not a variable.
+  Scope scope;
+
+  /// True if this refers to a variable name.
+  bool get isVariable => parent is NameExpression || parent is FunctionExpression || parent is VariableDeclarator || parent is CatchClause;
+  
+  /// True if this refers to a property name.
+  bool get isProperty => 
+      (parent is MemberExpression && (parent as MemberExpression).property == this) ||
+      (parent is Property && (parent as Property).key == this);
+  
+  /// True if this refers to a label name.
+  bool get isLabel => parent is BreakStatement || parent is ContinueStatement || parent is LabeledStatement;
 
   Name(this.value);
   
@@ -80,7 +135,6 @@ class Name extends Node {
   
   visitBy(Visitor v) => v.visitName(this);
 }
-
 
 ///// STATEMENTS /////
 
@@ -273,7 +327,7 @@ class TryStatement extends Statement {
   visitBy(Visitor v) => v.visitTry(this);
 }
 
-class CatchClause extends Node {
+class CatchClause extends Scope {
   Name param;
   BlockStatement body;
   
@@ -286,7 +340,7 @@ class CatchClause extends Node {
   
   String toString() => 'CatchClause';
   
-  visitBy(Visitor v) => v.visitCatch(this);
+  visitBy(Visitor v) => v.visitCatchClause(this);
 }
 
 class WhileStatement extends Statement {
@@ -360,7 +414,7 @@ class ForInStatement extends Statement {
 }
 
 class FunctionDeclaration extends Statement {
-  FunctionExpression function;
+  FunctionNode function;
 
   FunctionDeclaration(this.function);
   
@@ -451,7 +505,7 @@ class ObjectExpression extends Expression {
 
 class Property extends Node {
   Node key;           // Literal or Name
-  Expression value;   // Will be FunctionExpression with no name for getters and setters
+  Node value;         // Will be FunctionNode with no name for getters and setters
   String kind;        // May be: init, get, set
 
   Property(this.key, this.value, [this.kind = 'init']);
@@ -464,8 +518,11 @@ class Property extends Node {
   
   String get nameString => key is Name ? (key as Name).value : (key as LiteralExpression).value.toString();
   
-  /// Returns the value as a FunctionExpression. Useful for getters/setters.
-  FunctionExpression get function => value as FunctionExpression;
+  /// Returns the value as a FunctionNode. Useful for getters/setters.
+  FunctionNode get function => value as FunctionNode;
+  
+  /// Returns the value as an Expression. Useful for non-getter/setters.
+  Expression get expression => value as Expression;
 
   forEach(callback) {
     callback(key);
@@ -478,19 +535,11 @@ class Property extends Node {
 }
 
 class FunctionExpression extends Expression {
-  Name name;
-  List<Name> params;
-  Statement body;
-
-  FunctionExpression(this.name, this.params, this.body);
+  FunctionNode function;
   
-  bool get isExpression => parent is! FunctionDeclaration;
+  FunctionExpression(this.function);
 
-  forEach(callback) {
-    if (name != null) callback(name);
-    params.forEach(callback);
-    callback(body);
-  }
+  forEach(callback) => callback(function);
   
   String toString() => 'FunctionExpression';
   
@@ -592,27 +641,13 @@ class ConditionalExpression extends Expression {
   visitBy(Visitor v) => v.visitConditional(this);
 }
 
-class NewExpression extends Expression {
-  Expression callee;
-  List<Expression> arguments;
-
-  NewExpression(this.callee, this.arguments);
-  
-  forEach(callback) {
-    callback(callee);
-    arguments.forEach(callback);
-  }
-  
-  String toString() => 'NewExpression';
-  
-  visitBy(Visitor v) => v.visitNew(this);
-}
-
 class CallExpression extends Expression {
+  bool isNew;
   Expression callee;
   List<Expression> arguments;
 
-  CallExpression(this.callee, this.arguments);
+  CallExpression(this.callee, this.arguments, {this.isNew : false});
+  CallExpression.newCall(this.callee, this.arguments) : isNew = true;
   
   forEach(callback) {
     callback(callee);
