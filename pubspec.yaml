@@ -4,4 +4,4 @@ author: Asger Feldthaus
 description: JavaScript parser.
 homepage: https://github.com/asgerf/jsparser
 dependencies:
-  unicode: any
+  unicode: '>=0.0.8'
