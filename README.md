@@ -24,13 +24,5 @@ The `parsejs` function takes the following optional arguments:
 - `annotate`: If true, parser will initialize `Node.parent`, `Scope.environment`, and `Name.scope`, to simplify subsequent AST analysis. Default is true.
 
 
-## Testing
-
-We parse [test-262](http://test262.ecmascript.org/) and the [Octane benchmark suite](https://developers.google.com/octane), and compare the resulting AST against the one produced by [Esprima](http://esprima.org/). To run the tests, you must first install [node.js](http://nodejs.org/), then run the following:
-```
-cd test
-npm install
-./runtest
-```
 
 
