@@ -12,9 +12,13 @@ export 'src/lexer.dart' show ParseError;
 /// Parse [text] as a JavaScript program and return its AST.
 /// 
 /// Options:
-/// - [filename]: an string indicating where the source came from (this string has no special syntax or meaning).
+/// 
+/// - [filename]: a string indicating where the source came from (this string has no special syntax or meaning).
+/// 
 /// - [firstLine]: line number to associate with the first line of code.
+/// 
 /// - [handleNoise]: tolerate noise, such as hash bangs (#!) and HTML comment markers (<!--,-->) (default: true).
+/// 
 /// - [annotations]: if true, [Node.parent], [Scope.environment], and [Name.scope] will be initialized (default: true).
 Program parsejs(String text, {String filename, int firstLine : 1, bool handleNoise : true, bool annotations : true}) {
   Offsets offset = new Offsets(0, text.length, firstLine);
