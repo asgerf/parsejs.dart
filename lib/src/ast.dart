@@ -803,7 +803,7 @@ class LiteralExpression extends Expression {
 /// A regular expression literal.
 class RegexpExpression extends Expression {
   /// The entire literal, including slashes and flags. 
-  String regexp; // TODO: separate into regexp and flags
+  String regexp;
   
   RegexpExpression(this.regexp);
   
