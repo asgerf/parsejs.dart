@@ -1,7 +1,10 @@
 part of ast;
 
-/// Visitor interface for AST nodes. See [BaseVisitor] and [RecursiveVisitor].
+/// Visitor interface for AST nodes.
+/// 
+/// Also see [BaseVisitor] and [RecursiveVisitor].
 abstract class Visitor<T> {
+  /// Shorthand for `node.visitBy(this)`.
   T visit(Node node) => node.visitBy(this);
   
   T visitPrograms(Programs node);
@@ -113,10 +116,12 @@ class BaseVisitor<T> implements Visitor<T> {
 /// the children of the given node, otherwise that subtree will not be traversed.
 ///  
 /// For example:
+/// 
 ///     visitWhile(While node) {
 ///         print('Found while loop on line ${node.line}');
 ///         node.forEach(visit); // visit children
 ///     }
+///     
 /// Without the call to `forEach`, a while loop nested in another while loop would 
 /// not be found.
 class RecursiveVisitor<T> extends BaseVisitor<T> {

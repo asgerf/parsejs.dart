@@ -677,6 +677,7 @@ class UpdateExpression extends Expression {
   visitBy(Visitor v) => v.visitUpdateExpression(this);
 }
 
+/// Expression of form: `[condition] ? [then] : [otherwise]`.
 class ConditionalExpression extends Expression {
   Expression condition;
   Expression then;
@@ -695,6 +696,7 @@ class ConditionalExpression extends Expression {
   visitBy(Visitor v) => v.visitConditional(this);
 }
 
+/// Expression of form: `[callee](..[arguments]..)` or `new [callee](..[arguments]..)`.
 class CallExpression extends Expression {
   bool isNew;
   Expression callee;
@@ -713,6 +715,7 @@ class CallExpression extends Expression {
   visitBy(Visitor v) => v.visitCall(this);
 }
 
+/// Expression of form: `[object].[property].`
 class MemberExpression extends Expression {
   Expression object;
   Name property;
@@ -729,6 +732,7 @@ class MemberExpression extends Expression {
   visitBy(Visitor v) => v.visitMember(this);
 }
 
+/// Expression of form: `[object][[property]]`.
 class IndexExpression extends Expression {
   Expression object;
   Expression property;
@@ -746,6 +750,7 @@ class IndexExpression extends Expression {
 }
 
 /// A [Name] that is used as an expression. 
+/// 
 /// Note that "undefined", "NaN", and "Infinity" are name expressions, and not literals and one might expect.
 class NameExpression extends Expression {
   Name name;
@@ -759,8 +764,14 @@ class NameExpression extends Expression {
   visitBy(Visitor v) => v.visitNameExpression(this);
 }
 
+/// A literal string, number, boolean or null.
+/// 
+/// Note that "undefined", "NaN", and "Infinity" are [NameExpression]s, and not literals and one might expect.
 class LiteralExpression extends Expression {
+  /// A string, number, boolean, or null value, indicating the value of the literal.
   dynamic value;
+  
+  /// The verbatim source-code representation of the literal.
   String raw;
   
   LiteralExpression(this.value, [this.raw]);
@@ -784,8 +795,10 @@ class LiteralExpression extends Expression {
   visitBy(Visitor v) => v.visitLiteral(this);
 }
 
+/// A regular expression literal.
 class RegexpExpression extends Expression {
-  String regexp; // Includes slashes and flags and everything (TODO: separate into regexp and flags)
+  /// The entire literal, including slashes and flags. 
+  String regexp; // TODO: separate into regexp and flags
   
   RegexpExpression(this.regexp);
   
