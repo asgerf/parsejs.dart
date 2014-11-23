@@ -9,7 +9,7 @@ part 'ast_visitor.dart';
 abstract class Node {
   /// The parent of this node, or null if this is the [Program] node.
   /// 
-  /// If you transform the AST in any way, it is your own responsibility to update pointer pointers accordingly.
+  /// If you transform the AST in any way, it is your own responsibility to update parent pointers accordingly.
   Node parent;
   
   /// Source-code offset.
@@ -148,8 +148,6 @@ class Name extends Node {
   
   visitBy(Visitor v) => v.visitName(this);
 }
-
-///// STATEMENTS /////
 
 /// Superclass for all nodes that are statements.
 abstract class Statement extends Node {}
@@ -547,10 +545,17 @@ class ObjectExpression extends Expression {
 }
 
 /// Property initializer `[key]: [value]`, or getter `get [key] [value]`, or setter `set [key] [value]`.
+/// 
+/// For getters and setters, [value] is a [FunctionNode], otherwise it is an [Expression].
 class Property extends Node {
-  Node key;           // Literal or Name
-  Node value;         // Will be FunctionNode with no name for getters and setters
-  String kind;        // May be: init, get, set
+  /// Literal or Name indicating the name of the property. Use [nameString] to get the name as a string.
+  Node key;
+  
+  /// A [FunctionNode] (for getters and setters) or an [Expression] (for ordinary properties).
+  Node value;
+  
+  /// May be "init", "get", or "set".
+  String kind;
 
   Property(this.key, this.value, [this.kind = 'init']);
   Property.getter(this.key, FunctionExpression this.value) : kind = 'get';

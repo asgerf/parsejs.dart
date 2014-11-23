@@ -8,7 +8,7 @@ import 'package:parsejs/parsejs.dart';
 
 void main() {
     new File('test.js').readAsString().then((String code) {
-        Program ast = parse(code, filename: 'test.js')
+        Program ast = parsejs(code, filename: 'test.js')
         // Use the AST for something
     })
 }
