@@ -130,7 +130,7 @@ class Name extends Node {
   Scope scope;
 
   /// True if this refers to a variable name.
-  bool get isVariable => parent is NameExpression || parent is FunctionExpression || parent is VariableDeclarator || parent is CatchClause;
+  bool get isVariable => parent is NameExpression || parent is FunctionNode || parent is VariableDeclarator || parent is CatchClause;
   
   /// True if this refers to a property name.
   bool get isProperty => 
