@@ -107,7 +107,7 @@ bool isNamePart(x) => char.$a <= x && x <= char.$z || char.$A <= x && x <= char.
                       x == char.DOLLAR || x == char.UNDERSCORE ||
                       x > 127 && (isFancyLetter(x) || unicode.isDecimalNumber(x) || isFancyNamePart(x));
 
-bool isFancyNamePart(x) => x == char.ZWNJ || x == char.ZWJ || x == char.BOM || unicode.isNonspacingMark(x); // TODO: Combining Spacing Mark (Mc) is missing from unicode.
+bool isFancyNamePart(x) => x == char.ZWNJ || x == char.ZWJ || x == char.BOM || unicode.isNonspacingMark(x) || unicode.isSpacingMark(x);
 
 /// Ordinary whitespace (not line terminators)
 bool isWhitespace(x) {
