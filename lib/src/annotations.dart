@@ -80,9 +80,10 @@ class Resolver extends RecursiveVisitor {
     return node;
   }
   
-  Scope findScope(Name node) {
-    String name = node.value;
-    Node parent = node.parent;
+  Scope findScope(Name nameNode) {
+    String name = nameNode.value;
+    Node parent = nameNode.parent;
+    Node node = nameNode;
     if (parent is FunctionNode && parent.name == node && !parent.isExpression) {
       node = parent.parent;
     }
