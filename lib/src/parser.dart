@@ -14,16 +14,8 @@ class Parser {
   Lexer lexer;
   Token token;
   
-  Token pushbackBuffer;
-  
   /// End offset of the last consumed token (i.e. not the one in [token] but the one before that)
   int endOffset;
-  
-  
-  void pushback(Token tok) {
-    pushbackBuffer = token;
-    token = tok;
-  }
   
   dynamic fail({Token tok, String expected, String message}) {
     if (tok == null)
@@ -41,12 +33,7 @@ class Parser {
   Token next() {
     Token t = token;
     endOffset = t.endOffset;
-    if (pushbackBuffer != null) {
-      token = pushbackBuffer;
-      pushbackBuffer = null;
-    } else {
-      token = lexer.scan();
-    }
+    token = lexer.scan();
     return t;
   }
   
@@ -475,6 +462,20 @@ class Parser {
     return new ExpressionStatement(exp)..start=start..end=endOffset..line=exp.line;
   }
   
+  Statement parseExpressionOrLabeledStatement() {
+    int start = token.startOffset; // Note: not the same as exp.start due to removal of parentheses
+    Expression exp = parseExpression();
+    if (token.type == Token.COLON && exp is NameExpression && exp.start == start) {
+      Name name = exp.name;
+      next(); // skip the colon
+      Statement inner = parseStatement();
+      return new LabeledStatement(name, inner);
+    } else {
+      consumeSemicolon();
+      return new ExpressionStatement(exp)..start=start..end=endOffset..line=exp.line;
+    }
+  }
+  
   Statement parseIf() {
     int start = token.startOffset;
     int line = token.line;
@@ -719,17 +720,7 @@ class Parser {
       case 'debugger': return parseDebuggerStatement();
       case 'function': return parseFunctionDeclaration();
       default:
-        int start = token.startOffset;
-        Token nameTok = next();
-        if (token.type == Token.COLON) {
-          next();
-          Statement body = parseStatement();
-          return new LabeledStatement(makeName(nameTok), body)..start=start..end=endOffset..line=nameTok.line;
-        } else {
-          // revert lookahead and parse as expression statement
-          pushback(nameTok);
-          return parseExpressionStatement();
-        }
+        return parseExpressionOrLabeledStatement();
     }
   }
   
