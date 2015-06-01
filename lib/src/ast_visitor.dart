@@ -130,4 +130,116 @@ class RecursiveVisitor<T> extends BaseVisitor<T> {
   }
 }
 
+/// Visitor interface that takes an argument.
+///
+/// If multiple arguments are needed, they must be wrapped in a parameter object.
+///
+/// That there is no [RecursiveVisitor] variant that takes an argument.
+/// For a generic traversal that takes arguments, consider using [BaseVisitor1] and
+/// override `defaultNode` to visit the children of each node.
+abstract class Visitor1<T, A> {
+  /// Shorthand for `node.visitBy(this)`.
+  T visit(Node node, A arg) => node.visitBy1(this, arg);
 
+  T visitPrograms(Programs node, A arg);
+  T visitProgram(Program node, A arg);
+  T visitFunctionNode(FunctionNode node, A arg);
+  T visitName(Name node, A arg);
+
+  T visitEmptyStatement(EmptyStatement node, A arg);
+  T visitBlock(BlockStatement node, A arg);
+  T visitExpressionStatement(ExpressionStatement node, A arg);
+  T visitIf(IfStatement node, A arg);
+  T visitLabeledStatement(LabeledStatement node, A arg);
+  T visitBreak(BreakStatement node, A arg);
+  T visitContinue(ContinueStatement node, A arg);
+  T visitWith(WithStatement node, A arg);
+  T visitSwitch(SwitchStatement node, A arg);
+  T visitSwitchCase(SwitchCase node, A arg);
+  T visitReturn(ReturnStatement node, A arg);
+  T visitThrow(ThrowStatement node, A arg);
+  T visitTry(TryStatement node, A arg);
+  T visitCatchClause(CatchClause node, A arg);
+  T visitWhile(WhileStatement node, A arg);
+  T visitDoWhile(DoWhileStatement node, A arg);
+  T visitFor(ForStatement node, A arg);
+  T visitForIn(ForInStatement node, A arg);
+  T visitFunctionDeclaration(FunctionDeclaration node, A arg);
+  T visitVariableDeclaration(VariableDeclaration node, A arg);
+  T visitVariableDeclarator(VariableDeclarator node, A arg);
+  T visitDebugger(DebuggerStatement node, A arg);
+
+  T visitThis(ThisExpression node, A arg);
+  T visitArray(ArrayExpression node, A arg);
+  T visitObject(ObjectExpression node, A arg);
+  T visitProperty(Property node, A arg);
+  T visitFunctionExpression(FunctionExpression node, A arg);
+  T visitSequence(SequenceExpression node, A arg);
+  T visitUnary(UnaryExpression node, A arg);
+  T visitBinary(BinaryExpression node, A arg);
+  T visitAssignment(AssignmentExpression node, A arg);
+  T visitUpdateExpression(UpdateExpression node, A arg);
+  T visitConditional(ConditionalExpression node, A arg);
+  T visitCall(CallExpression node, A arg);
+  T visitMember(MemberExpression node, A arg);
+  T visitIndex(IndexExpression node, A arg);
+  T visitNameExpression(NameExpression node, A arg);
+  T visitLiteral(LiteralExpression node, A arg);
+  T visitRegexp(RegexpExpression node, A arg);
+}
+
+/// Implementation of [Visitor1] which redirects each `visit` method to a method [defaultNode].
+///
+/// This is convenient when only a couple of `visit` methods are needed
+/// and a default action can be taken for all other nodes.
+class BaseVisitor1<T,A> implements Visitor1<T,A> {
+  T defaultNode(Node node, A arg) => null;
+
+  T visit(Node node, A arg) => node.visitBy1(this, arg);
+
+  T visitPrograms(Programs node, A arg) => defaultNode(node, arg);
+  T visitProgram(Program node, A arg) => defaultNode(node, arg);
+  T visitFunctionNode(FunctionNode node, A arg) => defaultNode(node, arg);
+  T visitName(Name node, A arg) => defaultNode(node, arg);
+
+  T visitEmptyStatement(EmptyStatement node, A arg) => defaultNode(node, arg);
+  T visitBlock(BlockStatement node, A arg) => defaultNode(node, arg);
+  T visitExpressionStatement(ExpressionStatement node, A arg) => defaultNode(node, arg);
+  T visitIf(IfStatement node, A arg) => defaultNode(node, arg);
+  T visitLabeledStatement(LabeledStatement node, A arg) => defaultNode(node, arg);
+  T visitBreak(BreakStatement node, A arg) => defaultNode(node, arg);
+  T visitContinue(ContinueStatement node, A arg) => defaultNode(node, arg);
+  T visitWith(WithStatement node, A arg) => defaultNode(node, arg);
+  T visitSwitch(SwitchStatement node, A arg) => defaultNode(node, arg);
+  T visitSwitchCase(SwitchCase node, A arg) => defaultNode(node, arg);
+  T visitReturn(ReturnStatement node, A arg) => defaultNode(node, arg);
+  T visitThrow(ThrowStatement node, A arg) => defaultNode(node, arg);
+  T visitTry(TryStatement node, A arg) => defaultNode(node, arg);
+  T visitCatchClause(CatchClause node, A arg) => defaultNode(node, arg);
+  T visitWhile(WhileStatement node, A arg) => defaultNode(node, arg);
+  T visitDoWhile(DoWhileStatement node, A arg) => defaultNode(node, arg);
+  T visitFor(ForStatement node, A arg) => defaultNode(node, arg);
+  T visitForIn(ForInStatement node, A arg) => defaultNode(node, arg);
+  T visitFunctionDeclaration(FunctionDeclaration node, A arg) => defaultNode(node, arg);
+  T visitVariableDeclaration(VariableDeclaration node, A arg) => defaultNode(node, arg);
+  T visitVariableDeclarator(VariableDeclarator node, A arg) => defaultNode(node, arg);
+  T visitDebugger(DebuggerStatement node, A arg) => defaultNode(node, arg);
+
+  T visitThis(ThisExpression node, A arg) => defaultNode(node, arg);
+  T visitArray(ArrayExpression node, A arg) => defaultNode(node, arg);
+  T visitObject(ObjectExpression node, A arg) => defaultNode(node, arg);
+  T visitProperty(Property node, A arg) => defaultNode(node, arg);
+  T visitFunctionExpression(FunctionExpression node, A arg) => defaultNode(node, arg);
+  T visitSequence(SequenceExpression node, A arg) => defaultNode(node, arg);
+  T visitUnary(UnaryExpression node, A arg) => defaultNode(node, arg);
+  T visitBinary(BinaryExpression node, A arg) => defaultNode(node, arg);
+  T visitAssignment(AssignmentExpression node, A arg) => defaultNode(node, arg);
+  T visitUpdateExpression(UpdateExpression node, A arg) => defaultNode(node, arg);
+  T visitConditional(ConditionalExpression node, A arg) => defaultNode(node, arg);
+  T visitCall(CallExpression node, A arg) => defaultNode(node, arg);
+  T visitMember(MemberExpression node, A arg) => defaultNode(node, arg);
+  T visitIndex(IndexExpression node, A arg) => defaultNode(node, arg);
+  T visitNameExpression(NameExpression node, A arg) => defaultNode(node, arg);
+  T visitLiteral(LiteralExpression node, A arg) => defaultNode(node, arg);
+  T visitRegexp(RegexpExpression node, A arg) => defaultNode(node, arg);
+}

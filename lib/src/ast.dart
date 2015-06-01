@@ -53,6 +53,9 @@ abstract class Node {
   
   /// Calls the relevant `visit` method on the visitor.
   dynamic visitBy(Visitor visitor);
+
+  /// Calls the relevant `visit` method on the visitor.
+  dynamic visitBy1(Visitor1 visitor, arg);
 }
 
 /// Superclass for [Program], [FunctionNode], and [CatchClause], which are the three types of node that
@@ -76,6 +79,7 @@ class Programs extends Node {
   String toString() => 'Programs';
   
   visitBy(Visitor v) => v.visitPrograms(this);
+  visitBy1(Visitor1 v, arg) => v.visitPrograms(this, arg);
 }
 
 /// The root node of a JavaScript AST, representing the top-level scope.
@@ -93,6 +97,7 @@ class Program extends Scope {
   String toString() => 'Program';
   
   visitBy(Visitor v) => v.visitProgram(this);
+  visitBy1(Visitor1 v, arg) => v.visitProgram(this, arg);
 }
 
 /// A function, which may occur as a function expression, function declaration, or property accessor in an object literal.
@@ -116,6 +121,7 @@ class FunctionNode extends Scope {
   String toString() => 'FunctionNode';
   
   visitBy(Visitor v) => v.visitFunctionNode(this);
+  visitBy1(Visitor1 v, arg) => v.visitFunctionNode(this, arg);
 }
 
 /// Mention of a variable, property, or label.
@@ -147,6 +153,7 @@ class Name extends Node {
   String toString() => '$value';
   
   visitBy(Visitor v) => v.visitName(this);
+  visitBy1(Visitor1 v, arg) => v.visitName(this, arg);
 }
 
 /// Superclass for all nodes that are statements.
@@ -159,6 +166,7 @@ class EmptyStatement extends Statement {
   String toString() => 'EmptyStatement';
   
   visitBy(Visitor v) => v.visitEmptyStatement(this);
+  visitBy1(Visitor1 v, arg) => v.visitEmptyStatement(this, arg);
 }
 
 /// Statement of form: `{ [body] }`
@@ -172,6 +180,7 @@ class BlockStatement extends Statement {
   String toString() => 'BlockStatement';
   
   visitBy(Visitor v) => v.visitBlock(this);
+  visitBy1(Visitor1 v, arg) => v.visitBlock(this, arg);
 }
 
 /// Statement of form: `[expression];`
@@ -185,6 +194,7 @@ class ExpressionStatement extends Statement {
   String toString() => 'ExpressionStatement';
   
   visitBy(Visitor v) => v.visitExpressionStatement(this);
+  visitBy1(Visitor1 v, arg) => v.visitExpressionStatement(this, arg);
 }
 
 /// Statement of form: `if ([condition]) then [then] else [otherwise]`.
@@ -204,6 +214,7 @@ class IfStatement extends Statement {
   String toString() => 'IfStatement';
   
   visitBy(Visitor v) => v.visitIf(this);
+  visitBy1(Visitor1 v, arg) => v.visitIf(this, arg);
 }
 
 /// Statement of form: `[label]: [body]`
@@ -221,6 +232,7 @@ class LabeledStatement extends Statement {
   String toString() => 'LabeledStatement';
   
   visitBy(Visitor v) => v.visitLabeledStatement(this);
+  visitBy1(Visitor1 v, arg) => v.visitLabeledStatement(this, arg);
 }
 
 /// Statement of form: `break;` or `break [label];`
@@ -236,6 +248,7 @@ class BreakStatement extends Statement {
   String toString() => 'BreakStatement';
   
   visitBy(Visitor v) => v.visitBreak(this);
+  visitBy1(Visitor1 v, arg) => v.visitBreak(this, arg);
 }
 
 /// Statement of form: `continue;` or `continue [label];`
@@ -251,6 +264,7 @@ class ContinueStatement extends Statement {
   String toString() => 'ContinueStatement';
   
   visitBy(Visitor v) => v.visitContinue(this);
+  visitBy1(Visitor1 v, arg) => v.visitContinue(this, arg);
 }
 
 /// Statement of form: `with ([object]) { [body] }`
@@ -268,6 +282,7 @@ class WithStatement extends Statement {
   String toString() => 'WithStatement';
   
   visitBy(Visitor v) => v.visitWith(this);
+  visitBy1(Visitor1 v, arg) => v.visitWith(this, arg);
 }
 
 /// Statement of form: `switch ([argument]) { [cases] }`
@@ -285,6 +300,7 @@ class SwitchStatement extends Statement {
   String toString() => 'SwitchStatement';
   
   visitBy(Visitor v) => v.visitSwitch(this);
+  visitBy1(Visitor1 v, arg) => v.visitSwitch(this, arg);
 }
 
 /// Clause in a switch: `case [expression]: [body]` or `default: [body]` if [expression] is null.
@@ -306,6 +322,7 @@ class SwitchCase extends Node {
   String toString() => 'SwitchCase';
   
   visitBy(Visitor v) => v.visitSwitchCase(this);
+  visitBy1(Visitor1 v, arg) => v.visitSwitchCase(this, arg);
 }
 
 /// Statement of form: `return [argument];` or `return;`
@@ -319,6 +336,7 @@ class ReturnStatement extends Statement {
   String toString() => 'ReturnStatement';
   
   visitBy(Visitor v) => v.visitReturn(this);
+  visitBy1(Visitor1 v, arg) => v.visitReturn(this, arg);
 }
 
 /// Statement of form: `throw [argument];`
@@ -332,6 +350,7 @@ class ThrowStatement extends Statement {
   String toString() => 'ThrowStatement';
   
   visitBy(Visitor v) => v.visitThrow(this);
+  visitBy1(Visitor1 v, arg) => v.visitThrow(this, arg);
 }
 
 /// Statement of form: `try [block] catch [handler] finally [finalizer]`.
@@ -351,6 +370,7 @@ class TryStatement extends Statement {
   String toString() => 'TryStatement';
   
   visitBy(Visitor v) => v.visitTry(this);
+  visitBy1(Visitor1 v, arg) => v.visitTry(this, arg);
 }
 
 /// A catch clause: `catch ([param]) [body]`
@@ -368,6 +388,7 @@ class CatchClause extends Scope {
   String toString() => 'CatchClause';
   
   visitBy(Visitor v) => v.visitCatchClause(this);
+  visitBy1(Visitor1 v, arg) => v.visitCatchClause(this, arg);
 }
 
 /// Statement of form: `while ([condition]) [body]`
@@ -385,6 +406,7 @@ class WhileStatement extends Statement {
   String toString() => 'WhileStatement';
   
   visitBy(Visitor v) => v.visitWhile(this);
+  visitBy1(Visitor1 v, arg) => v.visitWhile(this, arg);
 }
 
 /// Statement of form: `do [body] while ([condition]);`
@@ -402,6 +424,7 @@ class DoWhileStatement extends Statement {
   String toString() => 'DoWhileStatement';
   
   visitBy(Visitor v) => v.visitDoWhile(this);
+  visitBy1(Visitor1 v, arg) => v.visitDoWhile(this, arg);
 }
 
 /// Statement of form: `for ([init]; [condition]; [update]) [body]`
@@ -424,6 +447,7 @@ class ForStatement extends Statement {
   String toString() => 'ForStatement';
   
   visitBy(Visitor v) => v.visitFor(this);
+  visitBy1(Visitor1 v, arg) => v.visitFor(this, arg);
 }
 
 /// Statement of form: `for ([left] in [right]) [body]`
@@ -444,6 +468,7 @@ class ForInStatement extends Statement {
   String toString() => 'ForInStatement';
   
   visitBy(Visitor v) => v.visitForIn(this);
+  visitBy1(Visitor1 v, arg) => v.visitForIn(this, arg);
 }
 
 /// Statement of form: `function [function.name])([function.params]) { [function.body] }`.
@@ -457,6 +482,7 @@ class FunctionDeclaration extends Statement {
   String toString() => 'FunctionDeclaration';
   
   visitBy(Visitor v) => v.visitFunctionDeclaration(this);
+  visitBy1(Visitor1 v, arg) => v.visitFunctionDeclaration(this, arg);
 }
 
 /// Statement of form: `var [declarations];`
@@ -470,6 +496,7 @@ class VariableDeclaration extends Statement {
   String toString() => 'VariableDeclaration';
   
   visitBy(Visitor v) => v.visitVariableDeclaration(this);
+  visitBy1(Visitor1 v, arg) => v.visitVariableDeclaration(this, arg);
 }
 
 /// Variable declaration: `[name]` or `[name] = [init]`.
@@ -487,6 +514,7 @@ class VariableDeclarator extends Node {
   String toString() => 'VariableDeclarator';
   
   visitBy(Visitor v) => v.visitVariableDeclarator(this);
+  visitBy1(Visitor1 v, arg) => v.visitVariableDeclarator(this, arg);
 }
 
 /// Statement of form: `debugger;`
@@ -496,6 +524,7 @@ class DebuggerStatement extends Statement {
   String toString() => 'DebuggerStatement';
   
   visitBy(Visitor v) => v.visitDebugger(this);
+  visitBy1(Visitor1 v, arg) => v.visitDebugger(this, arg);
 }
 
 ///////
@@ -510,6 +539,7 @@ class ThisExpression extends Expression {
   String toString() => 'ThisExpression';
   
   visitBy(Visitor v) => v.visitThis(this);
+  visitBy1(Visitor1 v, arg) => v.visitThis(this, arg);
 }
 
 /// Expression of form: `[ [expressions] ]`
@@ -529,6 +559,7 @@ class ArrayExpression extends Expression {
   String toString() => 'ArrayExpression';
   
   visitBy(Visitor v) => v.visitArray(this);
+  visitBy1(Visitor1 v, arg) => v.visitArray(this, arg);
 }
 
 /// Expression of form: `{ [properties] }`
@@ -542,6 +573,7 @@ class ObjectExpression extends Expression {
   String toString() => 'ObjectExpression';
   
   visitBy(Visitor v) => v.visitObject(this);
+  visitBy1(Visitor1 v, arg) => v.visitObject(this, arg);
 }
 
 /// Property initializer `[key]: [value]`, or getter `get [key] [value]`, or setter `set [key] [value]`.
@@ -582,6 +614,7 @@ class Property extends Node {
   String toString() => 'Property';
   
   visitBy(Visitor v) => v.visitProperty(this);
+  visitBy1(Visitor1 v, arg) => v.visitProperty(this, arg);
 }
 
 /// Expression of form: `function [function.name]([function.params]) { [function.body] }`.
@@ -595,6 +628,7 @@ class FunctionExpression extends Expression {
   String toString() => 'FunctionExpression';
   
   visitBy(Visitor v) => v.visitFunctionExpression(this);
+  visitBy1(Visitor1 v, arg) => v.visitFunctionExpression(this, arg);
 }
 
 /// Comma-seperated expressions.
@@ -608,6 +642,7 @@ class SequenceExpression extends Expression {
   String toString() => 'SequenceExpression';
   
   visitBy(Visitor v) => v.visitSequence(this);
+  visitBy1(Visitor1 v, arg) => v.visitSequence(this, arg);
 }
 
 /// Expression of form: `+[argument]`, or using any of the unary operators: 
@@ -623,6 +658,7 @@ class UnaryExpression extends Expression {
   String toString() => 'UnaryExpression';
   
   visitBy(Visitor v) => v.visitUnary(this);
+  visitBy1(Visitor1 v, arg) => v.visitUnary(this, arg);
 }
 
 /// Expression of form: `[left] + [right]`, or using any of the binary operators: 
@@ -642,6 +678,7 @@ class BinaryExpression extends Expression {
   String toString() => 'BinaryExpression';
   
   visitBy(Visitor v) => v.visitBinary(this);
+  visitBy1(Visitor1 v, arg) => v.visitBinary(this, arg);
 }
 
 /// Expression of form: `[left] = [right]` or `[left] += [right]` or using any of the assignment operators:
@@ -663,6 +700,7 @@ class AssignmentExpression extends Expression {
   String toString() => 'AssignmentExpression';
   
   visitBy(Visitor v) => v.visitAssignment(this);
+  visitBy1(Visitor1 v, arg) => v.visitAssignment(this, arg);
 }
 
 /// Expression of form: `++[argument]`, `--[argument]`, `[argument]++`, `[argument]--`.
@@ -680,6 +718,7 @@ class UpdateExpression extends Expression {
   String toString() => 'UpdateExpression';
   
   visitBy(Visitor v) => v.visitUpdateExpression(this);
+  visitBy1(Visitor1 v, arg) => v.visitUpdateExpression(this, arg);
 }
 
 /// Expression of form: `[condition] ? [then] : [otherwise]`.
@@ -699,6 +738,7 @@ class ConditionalExpression extends Expression {
   String toString() => 'ConditionalExpression';
   
   visitBy(Visitor v) => v.visitConditional(this);
+  visitBy1(Visitor1 v, arg) => v.visitConditional(this, arg);
 }
 
 /// Expression of form: `[callee](..[arguments]..)` or `new [callee](..[arguments]..)`.
@@ -718,6 +758,7 @@ class CallExpression extends Expression {
   String toString() => 'CallExpression';
   
   visitBy(Visitor v) => v.visitCall(this);
+  visitBy1(Visitor1 v, arg) => v.visitCall(this, arg);
 }
 
 /// Expression of form: `[object].[property].`
@@ -735,6 +776,7 @@ class MemberExpression extends Expression {
   String toString() => 'MemberExpression';
   
   visitBy(Visitor v) => v.visitMember(this);
+  visitBy1(Visitor1 v, arg) => v.visitMember(this, arg);
 }
 
 /// Expression of form: `[object][[property]]`.
@@ -752,6 +794,7 @@ class IndexExpression extends Expression {
   String toString() => 'IndexExpression';
   
   visitBy(Visitor v) => v.visitIndex(this);
+  visitBy1(Visitor1 v, arg) => v.visitIndex(this, arg);
 }
 
 /// A [Name] that is used as an expression. 
@@ -767,6 +810,7 @@ class NameExpression extends Expression {
   String toString() => 'NameExpression';
   
   visitBy(Visitor v) => v.visitNameExpression(this);
+  visitBy1(Visitor1 v, arg) => v.visitNameExpression(this, arg);
 }
 
 /// A literal string, number, boolean or null.
@@ -798,6 +842,7 @@ class LiteralExpression extends Expression {
   String toString() => 'LiteralExpression';
   
   visitBy(Visitor v) => v.visitLiteral(this);
+  visitBy1(Visitor1 v, arg) => v.visitLiteral(this, arg);
 }
 
 /// A regular expression literal.
@@ -812,5 +857,6 @@ class RegexpExpression extends Expression {
   String toString() => 'RegexpExpression';
   
   visitBy(Visitor v) => v.visitRegexp(this);
+  visitBy1(Visitor1 v, arg) => v.visitRegexp(this, arg);
 }
 

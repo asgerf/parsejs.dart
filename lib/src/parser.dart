@@ -193,7 +193,7 @@ class Parser {
         }
       }
     }
-    Token close = requireNext(Token.RBRACKET);
+    consume(Token.RBRACKET);
     return new ArrayExpression(expressions)..start=start..end=endOffset..line=open.line;
   }
   
