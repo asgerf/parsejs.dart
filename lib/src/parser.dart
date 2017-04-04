@@ -203,10 +203,10 @@ class Parser {
             ..end = regexTok.endOffset
             ..line = regexTok.line;
         }
-        return fail();
+        throw fail();
 
       default:
-        return fail();
+        throw fail();
     }
   }
 
@@ -255,7 +255,7 @@ class Parser {
           ..end = end
           ..line = line;
       default:
-        return fail(tok: tok, expected: 'property name');
+        throw fail(tok: tok, expected: 'property name');
     }
   }
 
@@ -291,7 +291,7 @@ class Parser {
         ..end = endOffset
         ..line = kindTok.line;
     }
-    return fail(expected: 'property', tok: nameTok);
+    throw fail(expected: 'property', tok: nameTok);
   }
 
   Expression parseObjectLiteral() {
@@ -305,7 +305,7 @@ class Parser {
       if (token.type == Token.RBRACE) break; // may end with extra comma
       properties.add(parseProperty());
     }
-    Token close = requireNext(Token.RBRACE);
+    requireNext(Token.RBRACE);
     return new ObjectExpression(properties)
       ..start = start
       ..end = endOffset
@@ -344,7 +344,7 @@ class Parser {
         case Token.LBRACKET:
           next();
           Expression index = parseExpression();
-          Token close = requireNext(Token.RBRACKET);
+          requireNext(Token.RBRACKET);
           exp = new IndexExpression(exp, index)
             ..start = start
             ..end = endOffset
@@ -671,8 +671,7 @@ class Parser {
       exp1 = parseExpression(allowIn: false);
     }
     if (exp1 != null && tryName('in')) {
-      if (exp1 is VariableDeclaration &&
-          (exp1 as VariableDeclaration).declarations.length > 1) {
+      if (exp1 is VariableDeclaration && exp1.declarations.length > 1) {
         fail(message: 'Multiple vars declared in for-in loop');
       }
       Expression exp2 = parseExpression();
@@ -812,7 +811,7 @@ class Parser {
         ..end = endOffset
         ..line = line;
     } else {
-      return fail();
+      throw fail();
     }
   }
 

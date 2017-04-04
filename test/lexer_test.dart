@@ -9,7 +9,7 @@ void main(List<String> args) {
 
   String filename = args[0];
 
-  new File(filename).readAsString().then((String text) {
+  new File(filename).readAsString().then<String>((String text) {
     try {
       Lexer lexer = new Lexer(text);
       for (Token token = lexer.scan();

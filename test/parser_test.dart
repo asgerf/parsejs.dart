@@ -35,7 +35,7 @@ void main(List<String> cmdargs) {
   }
 
   File file = new File(cmd.args[0]);
-  file.readAsString().then((String text) {
+  file.readAsString().then<String>((String text) {
     try {
       Stopwatch watch = new Stopwatch()..start();
       Program ast = parsejs(text, filename: file.path);

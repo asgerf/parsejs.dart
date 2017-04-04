@@ -14,7 +14,7 @@ void setParentPointers(Node node, [Node parent]) {
 }
 
 /// Initializes [Scope.environment] for all scopes in a given AST.
-class EnvironmentBuilder extends RecursiveVisitor {
+class EnvironmentBuilder extends RecursiveVisitor<Null> {
   void build(Program ast) {
     visit(ast);
   }
@@ -33,7 +33,7 @@ class EnvironmentBuilder extends RecursiveVisitor {
 
   visitFunctionNode(FunctionNode node) {
     node.environment = new Set<String>();
-    Node oldScope = currentScope;
+    Scope oldScope = currentScope;
     currentScope = node;
     node.environment.add('arguments');
     if (node.isExpression && node.name != null) {
@@ -66,7 +66,7 @@ class EnvironmentBuilder extends RecursiveVisitor {
 }
 
 /// Initializes the [Name.scope] link on all [Name] nodes.
-class Resolver extends RecursiveVisitor {
+class Resolver extends RecursiveVisitor<Null> {
   void resolve(Program ast) {
     visit(ast);
   }
@@ -75,7 +75,7 @@ class Resolver extends RecursiveVisitor {
     while (node is! Scope) {
       node = node.parent;
     }
-    return node;
+    return node as Scope;
   }
 
   Scope findScope(Name nameNode) {

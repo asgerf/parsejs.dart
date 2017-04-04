@@ -107,12 +107,12 @@ class Precedence {
   static const int MULTIPLICATIVE = 11;
 }
 
-bool isLetter(x) =>
+bool isLetter(int x) =>
     (char.$a <= x && x <= char.$z) ||
     (char.$A <= x && x <= char.$Z) ||
     x > 127 && isFancyLetter(x);
 
-bool isFancyLetter(x) =>
+bool isFancyLetter(int x) =>
     unicode.isUppercaseLetter(x) ||
     unicode.isLowercaseLetter(x) ||
     unicode.isTitlecaseLetter(x) ||
@@ -120,13 +120,14 @@ bool isFancyLetter(x) =>
     unicode.isOtherLetter(x) ||
     unicode.isLetterNumber(x);
 
-bool isDigit(x) =>
+bool isDigit(int x) =>
     char.$0 <= x &&
     x <= char.$9; // Does NOT and should not include unicode special digits
 
-bool isNameStart(x) => isLetter(x) || x == char.DOLLAR || x == char.UNDERSCORE;
+bool isNameStart(int x) =>
+    isLetter(x) || x == char.DOLLAR || x == char.UNDERSCORE;
 
-bool isNamePart(x) =>
+bool isNamePart(int x) =>
     char.$a <= x && x <= char.$z ||
     char.$A <= x && x <= char.$Z ||
     char.$0 <= x && x <= char.$9 ||
@@ -135,7 +136,7 @@ bool isNamePart(x) =>
     x > 127 &&
         (isFancyLetter(x) || unicode.isDecimalNumber(x) || isFancyNamePart(x));
 
-bool isFancyNamePart(x) =>
+bool isFancyNamePart(int x) =>
     x == char.ZWNJ ||
     x == char.ZWJ ||
     x == char.BOM ||
@@ -143,7 +144,7 @@ bool isFancyNamePart(x) =>
     unicode.isSpacingMark(x);
 
 /// Ordinary whitespace (not line terminators)
-bool isWhitespace(x) {
+bool isWhitespace(int x) {
   switch (x) {
     case char.SPACE:
     case char.TAB:
@@ -157,7 +158,7 @@ bool isWhitespace(x) {
   }
 }
 
-bool isEOL(x) {
+bool isEOL(int x) {
   switch (x) {
     case char.LF:
     case char.CR:
@@ -195,7 +196,7 @@ class Lexer {
     return index == endOfFile ? char.NULL : input[index];
   }
 
-  dynamic fail(String message) {
+  void fail(String message) {
     throw new ParseError(message, filename, currentLine, tokenStart, index);
   }
 
@@ -274,7 +275,7 @@ class Lexer {
       if (x == char.BACKSLASH) {
         x = next();
         if (x != char.$u) {
-          return fail("Invalid escape sequence in name");
+          fail("Invalid escape sequence in name");
         }
         ++index;
         buffer.add(scanHexSequence(4));
@@ -304,7 +305,7 @@ class Lexer {
       } else if (char.$A <= x && x <= char.$F) {
         value = (value << 4) + (x - char.$A + 10);
       } else {
-        return fail('Invalid hex sequence');
+        fail('Invalid hex sequence');
       }
       x = next();
     }
@@ -369,7 +370,8 @@ class Lexer {
                   }
                   break;
                 case char.NULL:
-                  return fail("Unterminated block comment");
+                  fail("Unterminated block comment");
+                  break;
                 case char.CR:
                   ++currentLine;
                   x = next();
@@ -591,7 +593,7 @@ class Lexer {
             ++index;
             continue;
           }
-          return fail(
+          fail(
               "Unrecognized character: '${new String.fromCharCode(x)}' (UTF+${x.toRadixString(16)})");
       }
     }
@@ -607,7 +609,8 @@ class Lexer {
     while (inCharClass || x != char.SLASH) {
       switch (x) {
         case char.NULL:
-          return fail("Unterminated regexp");
+          fail("Unterminated regexp");
+          break;
         case char.LBRACKET:
           inCharClass = true;
           break;
@@ -616,13 +619,13 @@ class Lexer {
           break;
         case char.BACKSLASH:
           x = next();
-          if (isEOL(x)) return fail("Unterminated regexp");
+          if (isEOL(x)) fail("Unterminated regexp");
           break;
         case char.CR:
         case char.LF:
         case char.LS:
         case char.PS:
-          return fail("Unterminated regexp");
+          fail("Unterminated regexp");
       }
       x = next();
     }
@@ -725,7 +728,7 @@ class Lexer {
         }
       } else if (isEOL(x)) {
         // Note: EOF counts as an EOL
-        return fail("Unterminated string literal");
+        fail("Unterminated string literal");
       } else {
         buffer.add(x); // ordinary char
         x = next();

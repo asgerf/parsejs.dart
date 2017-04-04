@@ -4,7 +4,7 @@ import '../lib/src/ast.dart';
 
 /// Converts an AST to a JSON object matching the AST structure emitted by the Esprima parser.
 /// This is for testing purposes, so the output can be compared against another well-tested parser.
-class Ast2Json extends Visitor {
+class Ast2Json extends Visitor<Object> {
   bool ranges;
   bool lines;
 
@@ -13,11 +13,11 @@ class Ast2Json extends Visitor {
   // NOTE: The order in which properties are mentioned is significant, since properties
   //       must be mentioned in the same order for our JSON comparator to work.
 
-  list(List<Node> nodes) => nodes.map(visit).toList();
+  List<Object> list(List<Node> nodes) => nodes.map(visit).toList();
 
   visit(Node node) {
     if (node == null) return null;
-    Map json = node.visitBy(this);
+    Map json = node.visitBy(this) as Map;
     if (ranges) {
       json['range'] = [node.start, node.end];
     }
@@ -33,7 +33,7 @@ class Ast2Json extends Visitor {
         'type': 'FunctionExpression',
         'id': visit(node.name),
         'params': list(node.params),
-        'defaults': [],
+        'defaults': <Object>[],
         'body': visit(node.body),
         'rest': null,
         'generator': false,
@@ -100,8 +100,8 @@ class Ast2Json extends Visitor {
   visitTry(TryStatement node) => {
         'type': 'TryStatement',
         'block': visit(node.block),
-        'guardedHandlers': [],
-        'handlers': node.handler == null ? [] : [visit(node.handler)],
+        'guardedHandlers': <Object>[],
+        'handlers': node.handler == null ? <Object>[] : [visit(node.handler)],
         'finalizer': visit(node.finalizer)
       };
 
@@ -143,7 +143,7 @@ class Ast2Json extends Visitor {
         'type': 'FunctionDeclaration',
         'id': visit(node.function.name),
         'params': list(node.function.params),
-        'defaults': [],
+        'defaults': <Object>[],
         'body': visit(node.function.body),
         'rest': null,
         'generator': false,
@@ -244,15 +244,15 @@ class Ast2Json extends Visitor {
   visitNameExpression(NameExpression node) => visit(node.name);
 
   // Some values cannot be encoded in JSON. We simply represent these as null.
-  bool isUnencodable(x) =>
+  bool isUnencodable(Object x) =>
       x == double.INFINITY || x == double.NEGATIVE_INFINITY || x == double.NAN;
 
-  visitLiteral(LiteralExpression node) => {
+  visitLiteral(LiteralExpression node) => <String, Object>{
         'type': 'Literal',
         'value': isUnencodable(node.value) ? null : node.value,
         'raw': node.raw
       };
 
   visitRegexp(RegexpExpression node) =>
-      {'type': 'Literal', 'value': {}, 'raw': node.regexp};
+      {'type': 'Literal', 'value': <String, Object>{}, 'raw': node.regexp};
 }
