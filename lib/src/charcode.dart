@@ -111,4 +111,3 @@ const int BOM = 0xFEFF; // Byte order mark
 
 const int LS = 0x2028; // line separator
 const int PS = 0x2029; // paragraph separator
-

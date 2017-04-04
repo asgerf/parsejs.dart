@@ -18,19 +18,19 @@ class EnvironmentBuilder extends RecursiveVisitor {
   void build(Program ast) {
     visit(ast);
   }
-  
+
   Scope currentScope; // Program or FunctionExpression
-  
+
   void addVar(Name name) {
     currentScope.environment.add(name.value);
   }
-  
+
   visitProgram(Program node) {
     node.environment = new Set<String>();
     currentScope = node;
     node.forEach(visit);
   }
-  
+
   visitFunctionNode(FunctionNode node) {
     node.environment = new Set<String>();
     Node oldScope = currentScope;
@@ -43,43 +43,41 @@ class EnvironmentBuilder extends RecursiveVisitor {
     visit(node.body);
     currentScope = oldScope;
   }
-  
+
   visitFunctionDeclaration(FunctionDeclaration node) {
     addVar(node.function.name);
     visit(node.function);
   }
-  
+
   visitFunctionExpression(FunctionExpression node) {
     visit(node.function);
   }
-  
+
   visitVariableDeclarator(VariableDeclarator node) {
     addVar(node.name);
     node.forEach(visit);
   }
-  
+
   visitCatchClause(CatchClause node) {
     node.environment = new Set<String>();
     node.environment.add(node.param.value);
     node.forEach(visit);
   }
-  
 }
 
 /// Initializes the [Name.scope] link on all [Name] nodes.
 class Resolver extends RecursiveVisitor {
-  
   void resolve(Program ast) {
     visit(ast);
   }
-  
+
   Scope enclosingScope(Node node) {
     while (node is! Scope) {
       node = node.parent;
     }
     return node;
   }
-  
+
   Scope findScope(Name nameNode) {
     String name = nameNode.value;
     Node parent = nameNode.parent;
@@ -89,18 +87,17 @@ class Resolver extends RecursiveVisitor {
     }
     Scope scope = enclosingScope(node);
     while (scope is! Program) {
-      if (scope.environment == null) throw "$scope does not have an environment";
+      if (scope.environment == null)
+        throw "$scope does not have an environment";
       if (scope.environment.contains(name)) return scope;
       scope = enclosingScope(scope.parent);
     }
     return scope;
   }
-  
+
   visitName(Name name) {
     if (name.isVariable) {
       name.scope = findScope(name);
     }
   }
-  
 }
-
