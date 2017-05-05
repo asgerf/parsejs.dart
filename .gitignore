@@ -4,3 +4,4 @@ node_modules
 test/tmp
 test/output
 .DS_Store
+.packages
