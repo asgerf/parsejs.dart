@@ -1,5 +1,5 @@
 import 'dart:io';
-import '../lib/src/lexer.dart';
+import 'package:parsejs/src/lexer.dart';
 
 void main(List<String> args) {
   if (args.length != 1) {
