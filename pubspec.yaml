@@ -1,5 +1,5 @@
 name: parsejs
-version: 1.1.0
+version: 1.2.0
 author: Asger Feldthaus <asger.feldthaus@gmail.com>
 description: JavaScript parser.
 homepage: https://github.com/asgerf/parsejs.dart

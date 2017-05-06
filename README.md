@@ -22,7 +22,4 @@ The `parsejs` function takes the following optional arguments:
 - `firstLine`: The line number to associate with the first line of code. Default is 1. Useful if code was extracted from an HTML file, and you prefer absolute line numbers.
 - `handleNoise`: If true, parser will try to ignore hash bangs and HTML comment tags surrounding the source code. Default is true.
 - `annotate`: If true, parser will initialize `Node.parent`, `Scope.environment`, and `Name.scope`, to simplify subsequent AST analysis. Default is true.
-
-
-
-
+- `parseAsExpression`: If true, the input will be parsed as an expression statement.
