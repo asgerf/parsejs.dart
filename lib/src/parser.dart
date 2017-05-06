@@ -928,9 +928,23 @@ class Parser {
       statements.add(parseStatement());
     }
     if (endOffset == null) {
-      endOffset = start; // for empty programs :p
+      endOffset = start;
     }
     return new Program(statements)
+      ..start = start
+      ..end = endOffset
+      ..line = line;
+  }
+
+  Program parseExpressionProgram() {
+    int start = token.startOffset;
+    int line = token.line;
+    var statement = parseExpressionStatement();
+    consume(Token.EOF);
+    if (endOffset == null) {
+      endOffset = start;
+    }
+    return new Program(<Statement>[statement])
       ..start = start
       ..end = endOffset
       ..line = line;
